@@ -304,6 +304,11 @@ Private Function TM_JsonString(ByVal sourceText As String) As String
     Dim characterCode As Long
     Dim escapedText As String
 
+    ' UserFormの複数行TextBoxは改行をCRLFで保持することがある。
+    ' 1文字ずつJSONエスケープする前にLFへ統一し、
+    ' Enter 1回が「\\n\\n」と二重出力されるのを防ぐ。
+    sourceText = TM_NormalizeLineBreaks(sourceText)
+
     escapedText = """"
 
     For index = 1 To Len(sourceText)
@@ -335,6 +340,19 @@ Private Function TM_JsonString(ByVal sourceText As String) As String
 
     escapedText = escapedText & """"
     TM_JsonString = escapedText
+
+End Function
+
+
+'============================================================
+' 改行コードをLFへ統一
+' CRLFを先に置換することで、意図した改行数を維持する
+'============================================================
+Private Function TM_NormalizeLineBreaks(ByVal sourceText As String) As String
+
+    sourceText = Replace(sourceText, vbCrLf, vbLf)
+    sourceText = Replace(sourceText, vbCr, vbLf)
+    TM_NormalizeLineBreaks = sourceText
 
 End Function
 
