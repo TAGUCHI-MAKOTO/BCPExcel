@@ -564,7 +564,13 @@ Private Sub AddButton( _
         .Width = controlWidth * mFormScale
         .Height = controlHeight * mFormScale
         .Font.Name = "Meiryo UI"
-        .Font.Size = 10 * mFormScale
+        '小数のフォントサイズは表示倍率によって位置がずれることがあるため、
+        '24インチ版は整数の12ptに固定する
+        If mFormScale > STANDARD_SCALE Then
+            .Font.Size = 12
+        Else
+            .Font.Size = 10
+        End If
         .Font.Bold = True
         .ForeColor = RGB(255, 255, 255)
         .BackColor = buttonColor
