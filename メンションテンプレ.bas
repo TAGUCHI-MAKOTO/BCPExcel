@@ -376,7 +376,7 @@ Private Function BuildFormCode() As String
     AddLine s, "    Else"
     AddLine s, "      elapsed = (86400# - CDbl(started)) + CDbl(Timer)"
     AddLine s, "    End If"
-    AddLine s, "  Loop While elapsed < 0.5"
+    AddLine s, "  Loop While elapsed < 0.3"
     AddLine s, "  targetControl.BackColor = RGB(255, 255, 252)"
     AddLine s, "  Me.Repaint"
     AddLine s, "End Sub"
