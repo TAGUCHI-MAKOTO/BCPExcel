@@ -1,0 +1,19 @@
+Option Explicit
+
+Private Sub Workbook_Open()
+
+    On Error GoTo OpenError
+
+    'テンプレート管理フォームを開く
+    テンプレート管理フォームを開く
+
+    Exit Sub
+
+OpenError:
+    MsgBox _
+        "テンプレート管理フォームを起動できませんでした。" & vbCrLf & _
+        "エラー内容：" & Err.Description, _
+        vbExclamation
+
+End Sub
+
