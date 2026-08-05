@@ -184,7 +184,7 @@ Private Sub AddLabel(ByVal frm As Object, ByVal nm As String, ByVal cap As Strin
     With c
         .Caption = cap: .Left = x: .Top = y: .Width = w: .Height = h
         .Font.Name = "Yu Gothic UI": .Font.Size = 10: .Font.Bold = isBold
-        .BackStyle = 0: .ForeColor = RGB(73, 55, 63)
+        .BackStyle = 0: .ForeColor = RGB(52, 37, 44)
     End With
 End Sub
 
@@ -206,7 +206,7 @@ Private Sub AddHeaderText(ByVal frm As Object, ByVal nm As String, ByVal cap As 
     With c
         .Caption = cap: .Left = x: .Top = y: .Width = w: .Height = h
         .Font.Name = "Yu Gothic UI": .Font.Size = 9: .Font.Bold = True
-        .BackStyle = 0: .ForeColor = RGB(82, 52, 65): .BorderStyle = 0
+        .BackStyle = 0: .ForeColor = RGB(59, 31, 43): .BorderStyle = 0
     End With
 End Sub
 
@@ -228,7 +228,7 @@ Private Sub AddTextBox(ByVal frm As Object, ByVal nm As String, ByVal x As Singl
     With c
         .Left = x: .Top = y: .Width = w: .Height = h
         .Font.Name = "Yu Gothic UI": .Font.Size = 11
-        .BackColor = RGB(255, 251, 252): .ForeColor = RGB(55, 45, 49)
+        .BackColor = RGB(255, 251, 252): .ForeColor = RGB(34, 30, 32)
         .BorderStyle = 1: .BorderColor = RGB(190, 158, 172)
         .MultiLine = multi
         If multi Then .EnterKeyBehavior = True: .ScrollBars = 2
@@ -244,7 +244,7 @@ Private Sub AddSearchHintLabel(ByVal frm As Object, ByVal nm As String, ByVal ca
         .Caption = cap: .Left = x: .Top = y: .Width = w: .Height = h
         .Font.Name = "Yu Gothic UI": .Font.Size = 11
         .BackStyle = 1: .BackColor = RGB(255, 251, 252)
-        .ForeColor = RGB(147, 116, 129)
+        .ForeColor = RGB(121, 89, 102)
     End With
 End Sub
 
@@ -255,7 +255,7 @@ Private Sub AddCheckBox(ByVal frm As Object, ByVal nm As String, ByVal cap As St
     With c
         .Caption = cap: .Left = x: .Top = y: .Width = w: .Height = h
         .Font.Name = "Yu Gothic UI": .Font.Size = 12: .Font.Bold = True
-        .BackColor = RGB(246, 237, 241): .ForeColor = RGB(73, 55, 63)
+        .BackColor = RGB(246, 237, 241): .ForeColor = RGB(52, 37, 44)
     End With
 End Sub
 
@@ -267,7 +267,7 @@ Private Sub AddButton(ByVal frm As Object, ByVal nm As String, ByVal cap As Stri
     With c
         .Caption = cap: .Left = x: .Top = y: .Width = w: .Height = h
         .Font.Name = "Yu Gothic UI": .Font.Size = 11: .Font.Bold = True
-        .BackColor = bg: .ForeColor = RGB(82, 52, 65)
+        .BackColor = bg: .ForeColor = RGB(59, 31, 43)
         .TakeFocusOnClick = False
     End With
 End Sub
@@ -279,7 +279,7 @@ Private Sub AddListBox(ByVal frm As Object, ByVal nm As String, ByVal x As Singl
     With c
         .Left = x: .Top = y: .Width = w: .Height = h
         .Font.Name = "Yu Gothic UI": .Font.Size = 11
-        .BackColor = RGB(255, 251, 252): .ForeColor = RGB(55, 45, 49)
+        .BackColor = RGB(255, 251, 252): .ForeColor = RGB(34, 30, 32)
         .BorderStyle = 1: .BorderColor = RGB(190, 158, 172)
         .ColumnCount = 4
         .ColumnWidths = "45 pt;275 pt;185 pt;0 pt"
