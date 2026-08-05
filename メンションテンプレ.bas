@@ -59,7 +59,7 @@ Public Sub メンションテンプレを作成()
         .Properties("Caption").Value = "テンプレート選択"
         .Properties("Width").Value = 1110
         .Properties("Height").Value = 630
-        .Properties("BackColor").Value = RGB(236, 238, 237)
+        .Properties("BackColor").Value = RGB(246, 237, 241)
         .Properties("StartUpPosition").Value = 1
     End With
 
@@ -95,7 +95,7 @@ Public Sub メンションテンプレを作成()
     AddCheckBox frm, "chkMark4", "至急", 740, 545, 70, 36
     AddCheckBox frm, "chkSVOnly", "LD・SV限", 822, 545, 108, 36
 
-    AddButton frm, "btnClear", "クリア", 944, 545, 130, 36, RGB(212, 220, 214)
+    AddButton frm, "btnClear", "クリア", 944, 545, 130, 36, RGB(219, 188, 202)
 
     stage = "フォーム処理コードの登録"
     vbComp.CodeModule.AddFromString BuildFormCode()
@@ -184,7 +184,7 @@ Private Sub AddLabel(ByVal frm As Object, ByVal nm As String, ByVal cap As Strin
     With c
         .Caption = cap: .Left = x: .Top = y: .Width = w: .Height = h
         .Font.Name = "Yu Gothic UI": .Font.Size = 10: .Font.Bold = isBold
-        .BackStyle = 0: .ForeColor = RGB(45, 50, 53)
+        .BackStyle = 0: .ForeColor = RGB(73, 55, 63)
     End With
 End Sub
 
@@ -194,7 +194,7 @@ Private Sub AddHeaderBar(ByVal frm As Object, ByVal x As Single, ByVal y As Sing
     Set c = frm.Controls.Add("Forms.Label.1", "lblHeaderBar", True)
     With c
         .Caption = "": .Left = x: .Top = y: .Width = w: .Height = h
-        .BackStyle = 1: .BackColor = RGB(202, 214, 222): .BorderStyle = 0
+        .BackStyle = 1: .BackColor = RGB(229, 198, 210): .BorderStyle = 0
     End With
 End Sub
 
@@ -206,7 +206,7 @@ Private Sub AddHeaderText(ByVal frm As Object, ByVal nm As String, ByVal cap As 
     With c
         .Caption = cap: .Left = x: .Top = y: .Width = w: .Height = h
         .Font.Name = "Yu Gothic UI": .Font.Size = 9: .Font.Bold = True
-        .BackStyle = 0: .ForeColor = RGB(39, 50, 57): .BorderStyle = 0
+        .BackStyle = 0: .ForeColor = RGB(82, 52, 65): .BorderStyle = 0
     End With
 End Sub
 
@@ -216,7 +216,7 @@ Private Sub AddHeaderDivider(ByVal frm As Object, ByVal nm As String, _
     Set c = frm.Controls.Add("Forms.Label.1", nm, True)
     With c
         .Caption = "": .Left = x: .Top = y + 3: .Width = 1: .Height = h - 6
-        .BackStyle = 1: .BackColor = RGB(135, 151, 160): .BorderStyle = 0
+        .BackStyle = 1: .BackColor = RGB(177, 135, 153): .BorderStyle = 0
     End With
 End Sub
 
@@ -228,8 +228,8 @@ Private Sub AddTextBox(ByVal frm As Object, ByVal nm As String, ByVal x As Singl
     With c
         .Left = x: .Top = y: .Width = w: .Height = h
         .Font.Name = "Yu Gothic UI": .Font.Size = 11
-        .BackColor = RGB(252, 252, 250): .ForeColor = RGB(38, 43, 46)
-        .BorderStyle = 1: .BorderColor = RGB(149, 158, 162)
+        .BackColor = RGB(255, 251, 252): .ForeColor = RGB(55, 45, 49)
+        .BorderStyle = 1: .BorderColor = RGB(190, 158, 172)
         .MultiLine = multi
         If multi Then .EnterKeyBehavior = True: .ScrollBars = 2
     End With
@@ -243,8 +243,8 @@ Private Sub AddSearchHintLabel(ByVal frm As Object, ByVal nm As String, ByVal ca
     With c
         .Caption = cap: .Left = x: .Top = y: .Width = w: .Height = h
         .Font.Name = "Yu Gothic UI": .Font.Size = 11
-        .BackStyle = 1: .BackColor = RGB(252, 252, 250)
-        .ForeColor = RGB(116, 122, 125)
+        .BackStyle = 1: .BackColor = RGB(255, 251, 252)
+        .ForeColor = RGB(147, 116, 129)
     End With
 End Sub
 
@@ -255,7 +255,7 @@ Private Sub AddCheckBox(ByVal frm As Object, ByVal nm As String, ByVal cap As St
     With c
         .Caption = cap: .Left = x: .Top = y: .Width = w: .Height = h
         .Font.Name = "Yu Gothic UI": .Font.Size = 12: .Font.Bold = True
-        .BackColor = RGB(236, 238, 237): .ForeColor = RGB(45, 50, 53)
+        .BackColor = RGB(246, 237, 241): .ForeColor = RGB(73, 55, 63)
     End With
 End Sub
 
@@ -267,7 +267,7 @@ Private Sub AddButton(ByVal frm As Object, ByVal nm As String, ByVal cap As Stri
     With c
         .Caption = cap: .Left = x: .Top = y: .Width = w: .Height = h
         .Font.Name = "Yu Gothic UI": .Font.Size = 11: .Font.Bold = True
-        .BackColor = bg: .ForeColor = RGB(39, 50, 57)
+        .BackColor = bg: .ForeColor = RGB(82, 52, 65)
         .TakeFocusOnClick = False
     End With
 End Sub
@@ -279,8 +279,8 @@ Private Sub AddListBox(ByVal frm As Object, ByVal nm As String, ByVal x As Singl
     With c
         .Left = x: .Top = y: .Width = w: .Height = h
         .Font.Name = "Yu Gothic UI": .Font.Size = 11
-        .BackColor = RGB(252, 252, 250): .ForeColor = RGB(38, 43, 46)
-        .BorderStyle = 1: .BorderColor = RGB(149, 158, 162)
+        .BackColor = RGB(255, 251, 252): .ForeColor = RGB(55, 45, 49)
+        .BorderStyle = 1: .BorderColor = RGB(190, 158, 172)
         .ColumnCount = 4
         .ColumnWidths = "45 pt;275 pt;185 pt;0 pt"
         .IntegralHeight = False
@@ -361,7 +361,7 @@ Private Function BuildFormCode() As String
     AddLine s, "CopyError:"
     AddLine s, "  mCopying = False"
     AddLine s, "  On Error Resume Next"
-    AddLine s, "  targetControl.BackColor = RGB(252, 252, 250)"
+    AddLine s, "  targetControl.BackColor = RGB(255, 251, 252)"
     AddLine s, "  On Error GoTo 0"
     AddLine s, "  MsgBox " & q & "コピーできませんでした。もう一度お試しください。" & q & ", vbExclamation"
     AddLine s, "End Sub"
@@ -379,7 +379,7 @@ Private Function BuildFormCode() As String
     AddLine s, "      elapsed = (86400# - CDbl(started)) + CDbl(Timer)"
     AddLine s, "    End If"
     AddLine s, "  Loop While elapsed < 0.3"
-    AddLine s, "  targetControl.BackColor = RGB(252, 252, 250)"
+    AddLine s, "  targetControl.BackColor = RGB(255, 251, 252)"
     AddLine s, "  Me.Repaint"
     AddLine s, "End Sub"
 
