@@ -11,13 +11,13 @@ Option Explicit
 ' 【使い方】
 '   1. このbasを標準モジュールとしてインポート
 '   2. Excelの「VBAプロジェクト オブジェクト モデルへのアクセスを信頼する」をON
-'   3. CreateTemplateSelectorForm を実行（初回のみ）
-'   4. ShowTemplateSelectorForm を実行してフォームを表示
+'   3. メンションテンプレを作成 を実行（初回のみ）
+'   4. メンションテンプレを開く を実行してフォームを表示
 ' ============================================================
 
 Private Const FORM_NAME As String = "frmTemplateSelector"
 
-Public Sub CreateTemplateSelectorForm()
+Public Sub メンションテンプレを作成()
     Dim targetBook As Workbook
     Dim vbProj As Object, vbComp As Object, frm As Object
     Dim stage As String, errNo As Long, errText As String
@@ -101,7 +101,7 @@ Public Sub CreateTemplateSelectorForm()
     vbComp.CodeModule.AddFromString BuildFormCode()
 
     MsgBox "テンプレート選択フォームを作成しました。" & vbCrLf & _
-           "次回から ShowTemplateSelectorForm を実行してください。", vbInformation
+           "次回から「メンションテンプレを開く」を実行してください。", vbInformation
     Exit Sub
 
 CreateError:
@@ -167,13 +167,13 @@ Private Function BuildErrorAdvice(ByVal stage As String, ByVal errNo As Long) As
     End If
 End Function
 
-Public Sub ShowTemplateSelectorForm()
+Public Sub メンションテンプレを開く()
     On Error GoTo NotCreated
     VBA.UserForms.Add(FORM_NAME).Show
     Exit Sub
 NotCreated:
     MsgBox "フォームがまだ作成されていません。" & vbCrLf & _
-           "先に CreateTemplateSelectorForm を実行してください。", vbExclamation
+           "先に「メンションテンプレを作成」を実行してください。", vbExclamation
 End Sub
 
 Private Sub AddLabel(ByVal frm As Object, ByVal nm As String, ByVal cap As String, _
