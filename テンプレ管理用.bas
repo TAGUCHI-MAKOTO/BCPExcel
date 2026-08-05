@@ -7,9 +7,9 @@ Private Const LARGE_MONITOR_SCALE As Double = 1.25
 Private mFormScale As Double
 
 '============================================================
-' ãƒ†ãƒ³ãƒ—ãƒ¬ãƒ¼ãƒˆç®¡ç†ãƒ•ã‚©ãƒ¼ãƒ ã‚’è‡ªå‹•ä½œæˆ
+' ƒeƒ“ƒvƒŒ[ƒgŠÇ—ƒtƒH[ƒ€‚ğ©“®ì¬
 '============================================================
-Public Sub ãƒ†ãƒ³ãƒ—ãƒ¬ãƒ¼ãƒˆç®¡ç†ãƒ•ã‚©ãƒ¼ãƒ ã‚’è‡ªå‹•ä½œæˆ()
+Public Sub ƒeƒ“ƒvƒŒ[ƒgŠÇ—ƒtƒH[ƒ€‚ğ©“®ì¬()
 
     CreateTemplateManagerForm STANDARD_SCALE
 
@@ -17,9 +17,9 @@ End Sub
 
 
 '============================================================
-' 24ã‚¤ãƒ³ãƒãƒ¢ãƒ‹ã‚¿ãƒ¼å‘ã‘ï¼ˆ125%ï¼‰ã®ç®¡ç†ãƒ•ã‚©ãƒ¼ãƒ ã‚’è‡ªå‹•ä½œæˆ
+' 24ƒCƒ“ƒ`ƒ‚ƒjƒ^[Œü‚¯i125%j‚ÌŠÇ—ƒtƒH[ƒ€‚ğ©“®ì¬
 '============================================================
-Public Sub ãƒ†ãƒ³ãƒ—ãƒ¬ãƒ¼ãƒˆç®¡ç†ãƒ•ã‚©ãƒ¼ãƒ ã‚’24ã‚¤ãƒ³ãƒç”¨ã«è‡ªå‹•ä½œæˆ()
+Public Sub ƒeƒ“ƒvƒŒ[ƒgŠÇ—ƒtƒH[ƒ€‚ğ24ƒCƒ“ƒ`—p‚É©“®ì¬()
 
     CreateTemplateManagerForm LARGE_MONITOR_SCALE
 
@@ -27,7 +27,7 @@ End Sub
 
 
 '============================================================
-' æŒ‡å®šå€ç‡ã§ãƒ†ãƒ³ãƒ—ãƒ¬ãƒ¼ãƒˆç®¡ç†ãƒ•ã‚©ãƒ¼ãƒ ã‚’è‡ªå‹•ä½œæˆ
+' w’è”{—¦‚Åƒeƒ“ƒvƒŒ[ƒgŠÇ—ƒtƒH[ƒ€‚ğ©“®ì¬
 '============================================================
 Private Sub CreateTemplateManagerForm(ByVal formScale As Double)
 
@@ -45,7 +45,7 @@ Private Sub CreateTemplateManagerForm(ByVal formScale As Double)
 
     mFormScale = formScale
 
-    currentStep = "VBAãƒ—ãƒ­ã‚¸ã‚§ã‚¯ãƒˆã®å–å¾—"
+    currentStep = "VBAƒvƒƒWƒFƒNƒg‚Ìæ“¾"
     Set vbProject = ThisWorkbook.VBProject
 
     On Error Resume Next
@@ -54,109 +54,109 @@ Private Sub CreateTemplateManagerForm(ByVal formScale As Double)
 
     If Not oldComponent Is Nothing Then
         answer = MsgBox( _
-            "æ—¢ã«ãƒ†ãƒ³ãƒ—ãƒ¬ãƒ¼ãƒˆç®¡ç†ãƒ•ã‚©ãƒ¼ãƒ ãŒå­˜åœ¨ã—ã¾ã™ã€‚" & vbCrLf & _
-            "æ—¢å­˜ãƒ•ã‚©ãƒ¼ãƒ ã®ä¸­èº«ã‚’ä½œã‚Šç›´ã—ã¾ã™ã‹ï¼Ÿ", _
+            "Šù‚Éƒeƒ“ƒvƒŒ[ƒgŠÇ—ƒtƒH[ƒ€‚ª‘¶İ‚µ‚Ü‚·B" & vbCrLf & _
+            "Šù‘¶ƒtƒH[ƒ€‚Ì’†g‚ğì‚è’¼‚µ‚Ü‚·‚©H", _
             vbQuestion + vbYesNo + vbDefaultButton2, _
-            "ãƒ•ã‚©ãƒ¼ãƒ å†ä½œæˆ")
+            "ƒtƒH[ƒ€Äì¬")
 
         If answer <> vbYes Then Exit Sub
 
-        currentStep = "æ—¢å­˜ãƒ•ã‚©ãƒ¼ãƒ ã®å–å¾—"
+        currentStep = "Šù‘¶ƒtƒH[ƒ€‚Ìæ“¾"
         Set vbComponent = oldComponent
         Set designer = vbComponent.Designer
 
-        currentStep = "æ—¢å­˜ãƒ•ã‚©ãƒ¼ãƒ ã®éƒ¨å“ã‚’åˆæœŸåŒ–"
+        currentStep = "Šù‘¶ƒtƒH[ƒ€‚Ì•”•i‚ğ‰Šú‰»"
         For controlIndex = designer.Controls.Count - 1 To 0 Step -1
             designer.Controls.Remove designer.Controls.Item(controlIndex).Name
         Next controlIndex
 
-        currentStep = "æ—¢å­˜ãƒ•ã‚©ãƒ¼ãƒ ã®ã‚³ãƒ¼ãƒ‰ã‚’åˆæœŸåŒ–"
+        currentStep = "Šù‘¶ƒtƒH[ƒ€‚ÌƒR[ƒh‚ğ‰Šú‰»"
         With vbComponent.CodeModule
             If .CountOfLines > 0 Then
                 .DeleteLines 1, .CountOfLines
             End If
         End With
     Else
-        currentStep = "ãƒ¦ãƒ¼ã‚¶ãƒ¼ãƒ•ã‚©ãƒ¼ãƒ ã®è¿½åŠ "
+        currentStep = "ƒ†[ƒU[ƒtƒH[ƒ€‚Ì’Ç‰Á"
         Set vbComponent = vbProject.VBComponents.Add(vbext_ct_MSForm)
         vbComponent.Name = FORM_NAME
 
-        currentStep = "ãƒ•ã‚©ãƒ¼ãƒ ç·¨é›†ç”»é¢ã®å–å¾—"
+        currentStep = "ƒtƒH[ƒ€•ÒW‰æ–Ê‚Ìæ“¾"
         Set designer = vbComponent.Designer
     End If
 
-    currentStep = "ãƒ•ã‚©ãƒ¼ãƒ æœ¬ä½“ã®è¨­å®š"
+    currentStep = "ƒtƒH[ƒ€–{‘Ì‚Ìİ’è"
     With vbComponent
-        .Properties("Caption").Value = "ãƒ†ãƒ³ãƒ—ãƒ¬ãƒ¼ãƒˆç®¡ç†"
+        .Properties("Caption").Value = "ƒeƒ“ƒvƒŒ[ƒgŠÇ—"
         .Properties("Width").Value = 800 * mFormScale
         .Properties("Height").Value = 480 * mFormScale
         .Properties("BackColor").Value = RGB(245, 247, 250)
         .Properties("StartUpPosition").Value = 1
     End With
 
-    currentStep = "ä»¶åæ¬„ã®é…ç½®"
-    AddLabel designer, "lblColumnB", "ä»¶å", 18, 18, 300, 18
+    currentStep = "Œ–¼—“‚Ì”z’u"
+    AddLabel designer, "lblColumnB", "Œ–¼", 18, 18, 300, 18
     AddTextBox designer, "txtColumnB", 18, 37, 465, 24, False
 
-    currentStep = "æœ¬æ–‡æ¬„ã®é…ç½®"
-    AddLabel designer, "lblColumnC", "æœ¬æ–‡", 18, 75, 300, 18
+    currentStep = "–{•¶—“‚Ì”z’u"
+    AddLabel designer, "lblColumnC", "–{•¶", 18, 75, 300, 18
     AddTextBox designer, "txtColumnC", 18, 94, 465, 238, True
 
-    currentStep = "ã‚¿ã‚°æ¬„ã®é…ç½®"
-    AddLabel designer, "lblColumnD", "ã‚¿ã‚°", 18, 347, 300, 18
+    currentStep = "ƒ^ƒO—“‚Ì”z’u"
+    AddLabel designer, "lblColumnD", "ƒ^ƒO", 18, 347, 300, 18
     AddTextBox designer, "txtColumnD", 18, 366, 465, 24, False
 
-    currentStep = "æ¤œç´¢æ¬„ã®é…ç½®"
-    AddLabel designer, "lblSearch", "ã‚­ãƒ¼ãƒ¯ãƒ¼ãƒ‰æ¤œç´¢", 510, 18, 270, 18
+    currentStep = "ŒŸõ—“‚Ì”z’u"
+    AddLabel designer, "lblSearch", "ƒL[ƒ[ƒhŒŸõ", 510, 18, 270, 18
     AddTextBox designer, "txtSearch", 510, 37, 270, 24, False
 
-    currentStep = "æ¤œç´¢çµæœãƒªã‚¹ãƒˆã®é…ç½®"
-    AddLabel designer, "lblResults", "æ¤œç´¢çµæœ", 510, 75, 270, 18
+    currentStep = "ŒŸõŒ‹‰ÊƒŠƒXƒg‚Ì”z’u"
+    AddLabel designer, "lblResults", "ŒŸõŒ‹‰Ê", 510, 75, 270, 18
     AddListBox designer, "lstResults", 510, 94, 270, 304
 
-    currentStep = "ãƒœã‚¿ãƒ³ã®é…ç½®"
-    AddButton designer, "btnRegister", "ç™»éŒ²", 18, 410, 85, 32, RGB(37, 99, 235)
-    AddButton designer, "btnDelete", "å‰Šé™¤", 113, 410, 85, 32, RGB(220, 38, 38)
-    AddButton designer, "btnClear", "ã‚¯ãƒªã‚¢", 208, 410, 85, 32, RGB(100, 116, 139)
-    AddButton designer, "btnExport", "ã‚¨ã‚¯ã‚¹ãƒãƒ¼ãƒˆ", 303, 410, 85, 32, RGB(5, 150, 105)
-    AddButton designer, "btnCopyOriginal", "åŸæœ¬ã‚’åæ˜ ", 398, 410, 85, 32, RGB(124, 58, 237)
+    currentStep = "ƒ{ƒ^ƒ“‚Ì”z’u"
+    AddButton designer, "btnRegister", "“o˜^", 18, 410, 85, 32, RGB(37, 99, 235)
+    AddButton designer, "btnDelete", "íœ", 113, 410, 85, 32, RGB(220, 38, 38)
+    AddButton designer, "btnClear", "ƒNƒŠƒA", 208, 410, 85, 32, RGB(100, 116, 139)
+    AddButton designer, "btnExport", "ƒGƒNƒXƒ|[ƒg", 303, 410, 85, 32, RGB(5, 150, 105)
+    AddButton designer, "btnCopyOriginal", "Œ´–{‚ğ”½‰f", 398, 410, 85, 32, RGB(124, 58, 237)
 
-    currentStep = "ãƒ•ã‚©ãƒ¼ãƒ å‡¦ç†ã‚³ãƒ¼ãƒ‰ã®ç™»éŒ²"
+    currentStep = "ƒtƒH[ƒ€ˆ—ƒR[ƒh‚Ì“o˜^"
     vbComponent.CodeModule.AddFromString GetFormCode()
 
-    currentStep = "ãƒ–ãƒƒã‚¯ã®ä¿å­˜"
+    currentStep = "ƒuƒbƒN‚Ì•Û‘¶"
     ThisWorkbook.Save
 
     MsgBox _
         IIf(mFormScale > STANDARD_SCALE, _
-            "24ã‚¤ãƒ³ãƒãƒ¢ãƒ‹ã‚¿ãƒ¼ç”¨ãƒ†ãƒ³ãƒ—ãƒ¬ãƒ¼ãƒˆç®¡ç†ãƒ•ã‚©ãƒ¼ãƒ ã‚’ä½œæˆã—ã¾ã—ãŸã€‚", _
-            "ãƒ†ãƒ³ãƒ—ãƒ¬ãƒ¼ãƒˆç®¡ç†ãƒ•ã‚©ãƒ¼ãƒ ã‚’ä½œæˆã—ã¾ã—ãŸã€‚") & vbCrLf & _
-        "ç¶šã‘ã¦ãƒ•ã‚©ãƒ¼ãƒ ã‚’é–‹ãã¾ã™ã€‚", _
+            "24ƒCƒ“ƒ`ƒ‚ƒjƒ^[—pƒeƒ“ƒvƒŒ[ƒgŠÇ—ƒtƒH[ƒ€‚ğì¬‚µ‚Ü‚µ‚½B", _
+            "ƒeƒ“ƒvƒŒ[ƒgŠÇ—ƒtƒH[ƒ€‚ğì¬‚µ‚Ü‚µ‚½B") & vbCrLf & _
+        "‘±‚¯‚ÄƒtƒH[ƒ€‚ğŠJ‚«‚Ü‚·B", _
         vbInformation
 
-    ãƒ†ãƒ³ãƒ—ãƒ¬ãƒ¼ãƒˆç®¡ç†ãƒ•ã‚©ãƒ¼ãƒ ã‚’é–‹ã
+    ƒeƒ“ƒvƒŒ[ƒgŠÇ—ƒtƒH[ƒ€‚ğŠJ‚­
     Exit Sub
 
 TrustError:
     MsgBox _
-        "ãƒ•ã‚©ãƒ¼ãƒ ã‚’è‡ªå‹•ä½œæˆã§ãã¾ã›ã‚“ã§ã—ãŸã€‚" & vbCrLf & vbCrLf & _
-        "Excelã®æ¬¡ã®è¨­å®šã‚’ç¢ºèªã—ã¦ãã ã•ã„ã€‚" & vbCrLf & _
-        "ãƒ•ã‚¡ã‚¤ãƒ« â†’ ã‚ªãƒ—ã‚·ãƒ§ãƒ³ â†’ ãƒˆãƒ©ã‚¹ãƒˆã‚»ãƒ³ã‚¿ãƒ¼" & vbCrLf & _
-        "â†’ ãƒˆãƒ©ã‚¹ãƒˆã‚»ãƒ³ã‚¿ãƒ¼ã®è¨­å®š â†’ ãƒã‚¯ãƒ­ã®è¨­å®š" & vbCrLf & _
-        "â†’ã€ŒVBAãƒ—ãƒ­ã‚¸ã‚§ã‚¯ãƒˆ ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆãƒ¢ãƒ‡ãƒ«ã¸ã®ã‚¢ã‚¯ã‚»ã‚¹ã‚’ä¿¡é ¼ã™ã‚‹ã€" & vbCrLf & vbCrLf & _
-        "å‡¦ç†ç®‡æ‰€ï¼š" & currentStep & vbCrLf & _
-        "ã‚¨ãƒ©ãƒ¼ç•ªå·ï¼š" & Err.Number & vbCrLf & _
-        "ã‚¨ãƒ©ãƒ¼å†…å®¹ï¼š" & Err.Description, _
+        "ƒtƒH[ƒ€‚ğ©“®ì¬‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B" & vbCrLf & vbCrLf & _
+        "Excel‚ÌŸ‚Ìİ’è‚ğŠm”F‚µ‚Ä‚­‚¾‚³‚¢B" & vbCrLf & _
+        "ƒtƒ@ƒCƒ‹ ¨ ƒIƒvƒVƒ‡ƒ“ ¨ ƒgƒ‰ƒXƒgƒZƒ“ƒ^[" & vbCrLf & _
+        "¨ ƒgƒ‰ƒXƒgƒZƒ“ƒ^[‚Ìİ’è ¨ ƒ}ƒNƒ‚Ìİ’è" & vbCrLf & _
+        "¨uVBAƒvƒƒWƒFƒNƒg ƒIƒuƒWƒFƒNƒgƒ‚ƒfƒ‹‚Ö‚ÌƒAƒNƒZƒX‚ğM—Š‚·‚év" & vbCrLf & vbCrLf & _
+        "ˆ—‰ÓŠF" & currentStep & vbCrLf & _
+        "ƒGƒ‰[”Ô†F" & Err.Number & vbCrLf & _
+        "ƒGƒ‰[“à—eF" & Err.Description, _
         vbExclamation, _
-        "è¨­å®šç¢ºèª"
+        "İ’èŠm”F"
 
 End Sub
 
 
 '============================================================
-' ä½œæˆæ¸ˆã¿ãƒ•ã‚©ãƒ¼ãƒ ã‚’é–‹ã
+' ì¬Ï‚İƒtƒH[ƒ€‚ğŠJ‚­
 '============================================================
-Public Sub ãƒ†ãƒ³ãƒ—ãƒ¬ãƒ¼ãƒˆç®¡ç†ãƒ•ã‚©ãƒ¼ãƒ ã‚’é–‹ã()
+Public Sub ƒeƒ“ƒvƒŒ[ƒgŠÇ—ƒtƒH[ƒ€‚ğŠJ‚­()
 
     Dim frm As Object
 
@@ -168,16 +168,16 @@ Public Sub ãƒ†ãƒ³ãƒ—ãƒ¬ãƒ¼ãƒˆç®¡ç†ãƒ•ã‚©ãƒ¼ãƒ ã‚’é–‹ã()
 
 FormNotFound:
     MsgBox _
-        "ãƒ†ãƒ³ãƒ—ãƒ¬ãƒ¼ãƒˆç®¡ç†ãƒ•ã‚©ãƒ¼ãƒ ãŒã¾ã ä½œæˆã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚" & vbCrLf & _
-        "å…ˆã«ã€Œãƒ†ãƒ³ãƒ—ãƒ¬ãƒ¼ãƒˆç®¡ç†ãƒ•ã‚©ãƒ¼ãƒ ã‚’è‡ªå‹•ä½œæˆã€ã‚’å®Ÿè¡Œã—ã¦ãã ã•ã„ã€‚", _
+        "ƒeƒ“ƒvƒŒ[ƒgŠÇ—ƒtƒH[ƒ€‚ª‚Ü‚¾ì¬‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB" & vbCrLf & _
+        "æ‚Éuƒeƒ“ƒvƒŒ[ƒgŠÇ—ƒtƒH[ƒ€‚ğ©“®ì¬v‚ğÀs‚µ‚Ä‚­‚¾‚³‚¢B", _
         vbExclamation
 
 End Sub
 
 
 '============================================================
-' ãƒ•ã‚©ãƒ¼ãƒ ã®ã‚¨ã‚¯ã‚¹ãƒãƒ¼ãƒˆãƒœã‚¿ãƒ³ã‹ã‚‰å‘¼ã³å‡ºã™JSONå‡ºåŠ›å‡¦ç†
-' åŸæœ¬ã‚·ãƒ¼ãƒˆï¼šA=ID / B=ä»¶å / C=æœ¬æ–‡ / D=ã‚¿ã‚°
+' ƒtƒH[ƒ€‚ÌƒGƒNƒXƒ|[ƒgƒ{ƒ^ƒ“‚©‚çŒÄ‚Ño‚·JSONo—Íˆ—
+' Œ´–{ƒV[ƒgFA=ID / B=Œ–¼ / C=–{•¶ / D=ƒ^ƒO
 '============================================================
 Public Sub ExportTemplatesJsonFromForm()
 
@@ -193,22 +193,22 @@ Public Sub ExportTemplatesJsonFromForm()
 
     On Error GoTo ExportError
 
-    Set ws = ThisWorkbook.Worksheets("åŸæœ¬")
+    Set ws = ThisWorkbook.Worksheets("Œ´–{")
 
-    'æœ¬æ–‡ãŒå…¥ã‚‹Cåˆ—ã‚’åŸºæº–ã«æœ€çµ‚è¡Œã‚’å–å¾—
+    '–{•¶‚ª“ü‚éC—ñ‚ğŠî€‚ÉÅIs‚ğæ“¾
     lastRow = ws.Cells(ws.Rows.Count, "C").End(xlUp).Row
 
     If lastRow < 2 Then
         MsgBox _
-            "ãƒ‡ãƒ¼ã‚¿ãŒã‚ã‚Šã¾ã›ã‚“ã€‚" & vbCrLf & _
-            "åŸæœ¬ã‚·ãƒ¼ãƒˆã®2è¡Œç›®ä»¥é™ã«æœ¬æ–‡ã‚’å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚", _
+            "ƒf[ƒ^‚ª‚ ‚è‚Ü‚¹‚ñB" & vbCrLf & _
+            "Œ´–{ƒV[ƒg‚Ì2s–ÚˆÈ~‚É–{•¶‚ğ“ü—Í‚µ‚Ä‚­‚¾‚³‚¢B", _
             vbExclamation
         Exit Sub
     End If
 
     outPath = _
-        "C:\Users\tagut\OneDrive\ãƒ‡ã‚¹ã‚¯ãƒˆãƒƒãƒ—\ã€æ‹¡å¼µæ©Ÿèƒ½ã€‘\" & _
-        "ãƒ†ãƒ³ãƒ—ãƒ¬ãƒ¼ãƒˆ.json"
+        "C:\Users\tagut\OneDrive\ƒfƒXƒNƒgƒbƒv\yŠg’£‹@”\z\" & _
+        "ƒeƒ“ƒvƒŒ[ƒg.json"
 
     jsonText = "[" & vbCrLf
     isFirst = True
@@ -219,7 +219,7 @@ Public Sub ExportTemplatesJsonFromForm()
         bodyText = CStr(ws.Cells(rowNumber, "C").Value)
         tagsText = CStr(ws.Cells(rowNumber, "D").Value)
 
-        'æœ¬æ–‡ãŒç©ºã®è¡Œã¯å‡ºåŠ›ã—ãªã„
+        '–{•¶‚ª‹ó‚Ìs‚Ío—Í‚µ‚È‚¢
         If Len(Trim$(bodyText)) > 0 Then
 
             If Not isFirst Then jsonText = jsonText & "," & vbCrLf
@@ -246,23 +246,23 @@ Public Sub ExportTemplatesJsonFromForm()
     TM_SaveUtf8NoBom outPath, jsonText
 
     MsgBox _
-        "å‡ºåŠ›ã—ã¾ã—ãŸï¼š" & vbCrLf & outPath, _
+        "o—Í‚µ‚Ü‚µ‚½F" & vbCrLf & outPath, _
         vbInformation
     Exit Sub
 
 ExportError:
     MsgBox _
-        "ã‚¨ã‚¯ã‚¹ãƒãƒ¼ãƒˆã§ãã¾ã›ã‚“ã§ã—ãŸã€‚" & vbCrLf & vbCrLf & _
-        "ã‚¨ãƒ©ãƒ¼å†…å®¹ï¼š" & Err.Description, _
+        "ƒGƒNƒXƒ|[ƒg‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B" & vbCrLf & vbCrLf & _
+        "ƒGƒ‰[“à—eF" & Err.Description, _
         vbExclamation
 
 End Sub
 
 
 '============================================================
-' ãƒ•ã‚©ãƒ¼ãƒ ã®ã€ŒåŸæœ¬ã‚’åæ˜ ã€ãƒœã‚¿ãƒ³ã‹ã‚‰å‘¼ã³å‡ºã™è»¢è¨˜å‡¦ç†
-' ã“ã®ãƒ–ãƒƒã‚¯ã®åŸæœ¬ã‚·ãƒ¼ãƒˆã‚’ã€é¸æŠã—ãŸãƒ–ãƒƒã‚¯ã®åŸæœ¬ã‚·ãƒ¼ãƒˆã¸ä¸Šæ›¸ãã™ã‚‹
-' ä¸¡æ–¹ã®ã‚·ãƒ¼ãƒˆãŒVeryHiddenã§ã‚‚è¡¨ç¤ºçŠ¶æ…‹ã‚’å¤‰æ›´ã›ãšå‡¦ç†ã§ãã‚‹
+' ƒtƒH[ƒ€‚ÌuŒ´–{‚ğ”½‰fvƒ{ƒ^ƒ“‚©‚çŒÄ‚Ño‚·“]‹Lˆ—
+' ‚±‚ÌƒuƒbƒN‚ÌŒ´–{ƒV[ƒg‚ğA‘I‘ğ‚µ‚½ƒuƒbƒN‚ÌŒ´–{ƒV[ƒg‚Öã‘‚«‚·‚é
+' —¼•û‚ÌƒV[ƒg‚ªVeryHidden‚Å‚à•\¦ó‘Ô‚ğ•ÏX‚¹‚¸ˆ—‚Å‚«‚é
 '============================================================
 Public Sub CopyOriginalSheetToSelectedWorkbook()
 
@@ -288,15 +288,15 @@ Public Sub CopyOriginalSheetToSelectedWorkbook()
 
     On Error GoTo CopyError
 
-    Set sourceSheet = ThisWorkbook.Worksheets("åŸæœ¬")
+    Set sourceSheet = ThisWorkbook.Worksheets("Œ´–{")
     Set fileDialog = Application.FileDialog(msoFileDialogFilePicker)
 
     With fileDialog
-        .Title = "åŸæœ¬ã‚’åæ˜ ã™ã‚‹Excelãƒ•ã‚¡ã‚¤ãƒ«ã‚’é¸æŠã—ã¦ãã ã•ã„"
+        .Title = "Œ´–{‚ğ”½‰f‚·‚éExcelƒtƒ@ƒCƒ‹‚ğ‘I‘ğ‚µ‚Ä‚­‚¾‚³‚¢"
         .AllowMultiSelect = False
         .Filters.Clear
         .Filters.Add _
-            "Excelãƒ•ã‚¡ã‚¤ãƒ«", _
+            "Excelƒtƒ@ƒCƒ‹", _
             "*.xlsx;*.xlsm;*.xlsb;*.xls"
 
         If Len(ThisWorkbook.Path) > 0 Then
@@ -314,10 +314,10 @@ Public Sub CopyOriginalSheetToSelectedWorkbook()
         vbTextCompare) = 0 Then
 
         MsgBox _
-            "ç¾åœ¨é–‹ã„ã¦ã„ã‚‹ãƒ•ã‚¡ã‚¤ãƒ«è‡ªèº«ã«ã¯åæ˜ ã§ãã¾ã›ã‚“ã€‚" & vbCrLf & _
-            "åˆ¥ã®Excelãƒ•ã‚¡ã‚¤ãƒ«ã‚’é¸æŠã—ã¦ãã ã•ã„ã€‚", _
+            "Œ»İŠJ‚¢‚Ä‚¢‚éƒtƒ@ƒCƒ‹©g‚É‚Í”½‰f‚Å‚«‚Ü‚¹‚ñB" & vbCrLf & _
+            "•Ê‚ÌExcelƒtƒ@ƒCƒ‹‚ğ‘I‘ğ‚µ‚Ä‚­‚¾‚³‚¢B", _
             vbExclamation, _
-            "ãƒ•ã‚¡ã‚¤ãƒ«é¸æŠ"
+            "ƒtƒ@ƒCƒ‹‘I‘ğ"
         Exit Sub
     End If
 
@@ -325,20 +325,20 @@ Public Sub CopyOriginalSheetToSelectedWorkbook()
 
     If Not openedWorkbook Is Nothing Then
         MsgBox _
-            "é¸æŠã—ãŸãƒ•ã‚¡ã‚¤ãƒ«ã¯æ—¢ã«é–‹ã‹ã‚Œã¦ã„ã¾ã™ã€‚" & vbCrLf & _
-            "ãƒ•ã‚¡ã‚¤ãƒ«ã‚’é–‰ã˜ã¦ã‹ã‚‰ã€ã‚‚ã†ä¸€åº¦å®Ÿè¡Œã—ã¦ãã ã•ã„ã€‚", _
+            "‘I‘ğ‚µ‚½ƒtƒ@ƒCƒ‹‚ÍŠù‚ÉŠJ‚©‚ê‚Ä‚¢‚Ü‚·B" & vbCrLf & _
+            "ƒtƒ@ƒCƒ‹‚ğ•Â‚¶‚Ä‚©‚çA‚à‚¤ˆê“xÀs‚µ‚Ä‚­‚¾‚³‚¢B", _
             vbExclamation, _
-            "ãƒ•ã‚¡ã‚¤ãƒ«ç¢ºèª"
+            "ƒtƒ@ƒCƒ‹Šm”F"
         Exit Sub
     End If
 
     answer = MsgBox( _
-        "æ¬¡ã®ãƒ•ã‚¡ã‚¤ãƒ«ã®ã€ŒåŸæœ¬ã€ã‚·ãƒ¼ãƒˆã‚’å…¨æ¶ˆå»ã—ã€" & vbCrLf & _
-        "ã“ã®ãƒ•ã‚¡ã‚¤ãƒ«ã®ã€ŒåŸæœ¬ã€ã«ç½®ãæ›ãˆã¾ã™ã€‚" & vbCrLf & vbCrLf & _
+        "Ÿ‚Ìƒtƒ@ƒCƒ‹‚ÌuŒ´–{vƒV[ƒg‚ğ‘SÁ‹‚µA" & vbCrLf & _
+        "‚±‚Ìƒtƒ@ƒCƒ‹‚ÌuŒ´–{v‚É’u‚«Š·‚¦‚Ü‚·B" & vbCrLf & vbCrLf & _
         selectedPath & vbCrLf & vbCrLf & _
-        "å‡¦ç†ã‚’ç¶šã‘ã¾ã™ã‹ï¼Ÿ", _
+        "ˆ—‚ğ‘±‚¯‚Ü‚·‚©H", _
         vbQuestion + vbYesNo + vbDefaultButton2, _
-        "åŸæœ¬ã®åæ˜ ç¢ºèª")
+        "Œ´–{‚Ì”½‰fŠm”F")
 
     If answer <> vbYes Then Exit Sub
 
@@ -368,21 +368,21 @@ Public Sub CopyOriginalSheetToSelectedWorkbook()
         Err.Raise _
             vbObjectError + 2101, _
             "CopyOriginalSheetToSelectedWorkbook", _
-            "é¸æŠã—ãŸãƒ•ã‚¡ã‚¤ãƒ«ãŒèª­ã¿å–ã‚Šå°‚ç”¨ã§é–‹ã‹ã‚Œã¾ã—ãŸã€‚" & _
+            "‘I‘ğ‚µ‚½ƒtƒ@ƒCƒ‹‚ª“Ç‚İæ‚èê—p‚ÅŠJ‚©‚ê‚Ü‚µ‚½B" & _
             vbCrLf & _
-            "ç·¨é›†ç”¨ãƒ‘ã‚¹ãƒ¯ãƒ¼ãƒ‰ã‚’å…¥åŠ›ã—ã¦é–‹ã‘ã‚‹çŠ¶æ…‹ã§ã€" & _
-            "ã‚‚ã†ä¸€åº¦å®Ÿè¡Œã—ã¦ãã ã•ã„ã€‚"
+            "•ÒW—pƒpƒXƒ[ƒh‚ğ“ü—Í‚µ‚ÄŠJ‚¯‚éó‘Ô‚ÅA" & _
+            "‚à‚¤ˆê“xÀs‚µ‚Ä‚­‚¾‚³‚¢B"
     End If
 
     On Error Resume Next
-    Set targetSheet = targetWorkbook.Worksheets("åŸæœ¬")
+    Set targetSheet = targetWorkbook.Worksheets("Œ´–{")
     On Error GoTo CopyError
 
     If targetSheet Is Nothing Then
         Err.Raise _
             vbObjectError + 2102, _
             "CopyOriginalSheetToSelectedWorkbook", _
-            "é¸æŠã—ãŸãƒ•ã‚¡ã‚¤ãƒ«ã«ã€ŒåŸæœ¬ã€ã‚·ãƒ¼ãƒˆãŒã‚ã‚Šã¾ã›ã‚“ã€‚"
+            "‘I‘ğ‚µ‚½ƒtƒ@ƒCƒ‹‚ÉuŒ´–{vƒV[ƒg‚ª‚ ‚è‚Ü‚¹‚ñB"
     End If
 
     TM_ReplaceWorksheetContents sourceSheet, targetSheet
@@ -396,10 +396,10 @@ Public Sub CopyOriginalSheetToSelectedWorkbook()
     Application.DisplayAlerts = previousDisplayAlerts
 
     MsgBox _
-        "é¸æŠã—ãŸãƒ•ã‚¡ã‚¤ãƒ«ã¸åŸæœ¬ã‚’åæ˜ ã—ã¾ã—ãŸã€‚" & vbCrLf & _
+        "‘I‘ğ‚µ‚½ƒtƒ@ƒCƒ‹‚ÖŒ´–{‚ğ”½‰f‚µ‚Ü‚µ‚½B" & vbCrLf & _
         selectedPath, _
         vbInformation, _
-        "åæ˜ å®Œäº†"
+        "”½‰fŠ®—¹"
     Exit Sub
 
 CopyError:
@@ -428,17 +428,17 @@ CopyError:
     On Error GoTo 0
 
     MsgBox _
-        "åŸæœ¬ã‚’åæ˜ ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚" & vbCrLf & vbCrLf & _
-        "ã‚¨ãƒ©ãƒ¼ç•ªå·ï¼š" & CStr(errorNumber) & vbCrLf & _
-        "ã‚¨ãƒ©ãƒ¼å†…å®¹ï¼š" & errorDescription, _
+        "Œ´–{‚ğ”½‰f‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B" & vbCrLf & vbCrLf & _
+        "ƒGƒ‰[”Ô†F" & CStr(errorNumber) & vbCrLf & _
+        "ƒGƒ‰[“à—eF" & errorDescription, _
         vbExclamation, _
-        "åæ˜ ã‚¨ãƒ©ãƒ¼"
+        "”½‰fƒGƒ‰["
 
 End Sub
 
 
 '============================================================
-' æŒ‡å®šã—ãŸãƒ•ã‚¡ã‚¤ãƒ«ãŒæ—¢ã«é–‹ã‹ã‚Œã¦ã„ã‚‹ã‹ç¢ºèª
+' w’è‚µ‚½ƒtƒ@ƒCƒ‹‚ªŠù‚ÉŠJ‚©‚ê‚Ä‚¢‚é‚©Šm”F
 '============================================================
 Private Function TM_FindOpenWorkbook( _
     ByVal targetPath As String) As Workbook
@@ -460,8 +460,8 @@ End Function
 
 
 '============================================================
-' è»¢è¨˜å…ˆã‚’å…¨æ¶ˆå»ã—ã€è»¢è¨˜å…ƒã®ä½¿ç”¨ç¯„å›²ã‚’ãã®ã¾ã¾è¤‡è£½
-' ã‚»ãƒ«å†…å®¹ãƒ»æ•°å¼ãƒ»æ›¸å¼ãƒ»åˆ—å¹…ãƒ»è¡Œé«˜ãƒ»éè¡¨ç¤ºçŠ¶æ…‹ã‚’å¼•ãç¶™ã
+' “]‹Læ‚ğ‘SÁ‹‚µA“]‹LŒ³‚Ìg—p”ÍˆÍ‚ğ‚»‚Ì‚Ü‚Ü•¡»
+' ƒZƒ‹“à—eE”®E‘®E—ñ•Es‚E”ñ•\¦ó‘Ô‚ğˆø‚«Œp‚®
 '============================================================
 Private Sub TM_ReplaceWorksheetContents( _
     ByVal sourceSheet As Worksheet, _
@@ -504,7 +504,7 @@ End Sub
 
 
 '============================================================
-' ã‚¿ã‚°æ–‡å­—åˆ—ã‚’JSONé…åˆ—ã¸å¤‰æ›
+' ƒ^ƒO•¶š—ñ‚ğJSON”z—ñ‚Ö•ÏŠ·
 '============================================================
 Private Function TM_TagsToJsonArray(ByVal sourceText As String) As String
 
@@ -567,7 +567,7 @@ End Function
 
 
 '============================================================
-' JSONæ–‡å­—åˆ—ç”¨ã‚¨ã‚¹ã‚±ãƒ¼ãƒ—
+' JSON•¶š—ñ—pƒGƒXƒP[ƒv
 '============================================================
 Private Function TM_JsonString(ByVal sourceText As String) As String
 
@@ -576,9 +576,9 @@ Private Function TM_JsonString(ByVal sourceText As String) As String
     Dim characterCode As Long
     Dim escapedText As String
 
-    ' UserFormã®è¤‡æ•°è¡ŒTextBoxã¯æ”¹è¡Œã‚’CRLFã§ä¿æŒã™ã‚‹ã“ã¨ãŒã‚ã‚‹ã€‚
-    ' 1æ–‡å­—ãšã¤JSONã‚¨ã‚¹ã‚±ãƒ¼ãƒ—ã™ã‚‹å‰ã«LFã¸çµ±ä¸€ã—ã€
-    ' Enter 1å›ãŒã€Œ\\n\\nã€ã¨äºŒé‡å‡ºåŠ›ã•ã‚Œã‚‹ã®ã‚’é˜²ãã€‚
+    ' UserForm‚Ì•¡”sTextBox‚Í‰üs‚ğCRLF‚Å•Û‚·‚é‚±‚Æ‚ª‚ ‚éB
+    ' 1•¶š‚¸‚ÂJSONƒGƒXƒP[ƒv‚·‚é‘O‚ÉLF‚Ö“ˆê‚µA
+    ' Enter 1‰ñ‚ªu\\n\\nv‚Æ“ñdo—Í‚³‚ê‚é‚Ì‚ğ–h‚®B
     sourceText = TM_NormalizeLineBreaks(sourceText)
 
     escapedText = """"
@@ -617,8 +617,8 @@ End Function
 
 
 '============================================================
-' æ”¹è¡Œã‚³ãƒ¼ãƒ‰ã‚’LFã¸çµ±ä¸€
-' CRLFã‚’å…ˆã«ç½®æ›ã™ã‚‹ã“ã¨ã§ã€æ„å›³ã—ãŸæ”¹è¡Œæ•°ã‚’ç¶­æŒã™ã‚‹
+' ‰üsƒR[ƒh‚ğLF‚Ö“ˆê
+' CRLF‚ğæ‚É’uŠ·‚·‚é‚±‚Æ‚ÅAˆÓ}‚µ‚½‰üs”‚ğˆÛ‚·‚é
 '============================================================
 Private Function TM_NormalizeLineBreaks(ByVal sourceText As String) As String
 
@@ -630,7 +630,7 @@ End Function
 
 
 '============================================================
-' UTF-8ï¼ˆBOMãªã—ï¼‰ã§ä¿å­˜
+' UTF-8iBOM‚È‚µj‚Å•Û‘¶
 '============================================================
 Private Sub TM_SaveUtf8NoBom( _
     ByVal filePath As String, _
@@ -684,7 +684,7 @@ End Sub
 
 
 '============================================================
-' ãƒ©ãƒ™ãƒ«è¿½åŠ 
+' ƒ‰ƒxƒ‹’Ç‰Á
 '============================================================
 Private Sub AddLabel( _
     ByVal designer As Object, _
@@ -715,7 +715,7 @@ End Sub
 
 
 '============================================================
-' ãƒ†ã‚­ã‚¹ãƒˆãƒœãƒƒã‚¯ã‚¹è¿½åŠ 
+' ƒeƒLƒXƒgƒ{ƒbƒNƒX’Ç‰Á
 '============================================================
 Private Sub AddTextBox( _
     ByVal designer As Object, _
@@ -753,7 +753,7 @@ End Sub
 
 
 '============================================================
-' ãƒªã‚¹ãƒˆãƒœãƒƒã‚¯ã‚¹è¿½åŠ 
+' ƒŠƒXƒgƒ{ƒbƒNƒX’Ç‰Á
 '============================================================
 Private Sub AddListBox( _
     ByVal designer As Object, _
@@ -786,7 +786,7 @@ End Sub
 
 
 '============================================================
-' ãƒœã‚¿ãƒ³è¿½åŠ 
+' ƒ{ƒ^ƒ“’Ç‰Á
 '============================================================
 Private Sub AddButton( _
     ByVal designer As Object, _
@@ -809,8 +809,8 @@ Private Sub AddButton( _
         .Width = controlWidth * mFormScale
         .Height = controlHeight * mFormScale
         .Font.Name = "Meiryo UI"
-        'å°æ•°ã®ãƒ•ã‚©ãƒ³ãƒˆã‚µã‚¤ã‚ºã¯è¡¨ç¤ºå€ç‡ã«ã‚ˆã£ã¦ä½ç½®ãŒãšã‚Œã‚‹ã“ã¨ãŒã‚ã‚‹ãŸã‚ã€
-        '24ã‚¤ãƒ³ãƒç‰ˆã¯æ•´æ•°ã®12ptã«å›ºå®šã™ã‚‹
+        '¬”‚ÌƒtƒHƒ“ƒgƒTƒCƒY‚Í•\¦”{—¦‚É‚æ‚Á‚ÄˆÊ’u‚ª‚¸‚ê‚é‚±‚Æ‚ª‚ ‚é‚½‚ßA
+        '24ƒCƒ“ƒ`”Å‚Í®”‚Ì12pt‚ÉŒÅ’è‚·‚é
         If mFormScale > STANDARD_SCALE Then
             .Font.Size = 12
         Else
@@ -826,7 +826,7 @@ End Sub
 
 
 '============================================================
-' è‡ªå‹•ç”Ÿæˆã™ã‚‹ãƒ¦ãƒ¼ã‚¶ãƒ¼ãƒ•ã‚©ãƒ¼ãƒ å†…ã®ã‚³ãƒ¼ãƒ‰
+' ©“®¶¬‚·‚éƒ†[ƒU[ƒtƒH[ƒ€“à‚ÌƒR[ƒh
 '============================================================
 Private Function GetFormCode() As String
 
@@ -834,9 +834,9 @@ Private Function GetFormCode() As String
 
     AddCodeLine code, "Option Explicit"
     AddCodeLine code, ""
-    AddCodeLine code, "Private Const TARGET_SHEET As String = ""åŸæœ¬"""
+    AddCodeLine code, "Private Const TARGET_SHEET As String = ""Œ´–{"""
     AddCodeLine code, "Private Const FIRST_DATA_ROW As Long = 2"
-    AddCodeLine code, "Private Const SEARCH_PLACEHOLDER As String = ""ã‚­ãƒ¼ãƒ¯ãƒ¼ãƒ‰ã‚’å…¥åŠ›ã—ã¦ãã ã•ã„"""
+    AddCodeLine code, "Private Const SEARCH_PLACEHOLDER As String = ""ƒL[ƒ[ƒh‚ğ“ü—Í‚µ‚Ä‚­‚¾‚³‚¢"""
     AddCodeLine code, ""
     AddCodeLine code, "Private SelectedID As Long"
     AddCodeLine code, "Private IsPlaceholder As Boolean"
@@ -882,14 +882,14 @@ Private Function GetFormCode() As String
     AddCodeLine code, "    Set ws = ThisWorkbook.Worksheets(TARGET_SHEET)"
     AddCodeLine code, "    targetRow = FindRowByID(ws, SelectedID)"
     AddCodeLine code, "    If targetRow = 0 Then"
-    AddCodeLine code, "        MsgBox ""é¸æŠã—ãŸãƒ‡ãƒ¼ã‚¿ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã§ã—ãŸã€‚"", vbExclamation"
+    AddCodeLine code, "        MsgBox ""‘I‘ğ‚µ‚½ƒf[ƒ^‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñ‚Å‚µ‚½B"", vbExclamation"
     AddCodeLine code, "        ResetForm"
     AddCodeLine code, "        Exit Sub"
     AddCodeLine code, "    End If"
     AddCodeLine code, "    Me.txtColumnB.Value = ws.Cells(targetRow, ""B"").Value"
     AddCodeLine code, "    Me.txtColumnC.Value = ws.Cells(targetRow, ""C"").Value"
     AddCodeLine code, "    Me.txtColumnD.Value = ws.Cells(targetRow, ""D"").Value"
-    AddCodeLine code, "    Me.btnRegister.Caption = ""ä¸Šæ›¸ã"""
+    AddCodeLine code, "    Me.btnRegister.Caption = ""ã‘‚«"""
     AddCodeLine code, "End Sub"
     AddCodeLine code, ""
     AddCodeLine code, "Private Sub btnRegister_Click()"
@@ -900,7 +900,7 @@ Private Function GetFormCode() As String
     AddCodeLine code, "    Dim result As VbMsgBoxResult"
     AddCodeLine code, "    Set ws = ThisWorkbook.Worksheets(TARGET_SHEET)"
     AddCodeLine code, "    If Trim$(Me.txtColumnC.Value) = """" Then"
-    AddCodeLine code, "        MsgBox ""æœ¬æ–‡ã‚’å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚"", vbExclamation"
+    AddCodeLine code, "        MsgBox ""–{•¶‚ğ“ü—Í‚µ‚Ä‚­‚¾‚³‚¢B"", vbExclamation"
     AddCodeLine code, "        Me.txtColumnC.SetFocus"
     AddCodeLine code, "        Exit Sub"
     AddCodeLine code, "    End If"
@@ -918,20 +918,20 @@ Private Function GetFormCode() As String
     AddCodeLine code, "        ws.Cells(targetRow, ""B"").Value = Me.txtColumnB.Value"
     AddCodeLine code, "        ws.Cells(targetRow, ""C"").Value = Me.txtColumnC.Value"
     AddCodeLine code, "        ws.Cells(targetRow, ""D"").Value = Me.txtColumnD.Value"
-    AddCodeLine code, "        MsgBox ""ç™»éŒ²ã—ã¾ã—ãŸã€‚"", vbInformation"
+    AddCodeLine code, "        MsgBox ""“o˜^‚µ‚Ü‚µ‚½B"", vbInformation"
     AddCodeLine code, "    Else"
     AddCodeLine code, "        targetRow = FindRowByID(ws, SelectedID)"
     AddCodeLine code, "        If targetRow = 0 Then"
-    AddCodeLine code, "            MsgBox ""ä¸Šæ›¸ãå¯¾è±¡ã®ãƒ‡ãƒ¼ã‚¿ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã§ã—ãŸã€‚"", vbExclamation"
+    AddCodeLine code, "            MsgBox ""ã‘‚«‘ÎÛ‚Ìƒf[ƒ^‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñ‚Å‚µ‚½B"", vbExclamation"
     AddCodeLine code, "            ResetForm"
     AddCodeLine code, "            Exit Sub"
     AddCodeLine code, "        End If"
-    AddCodeLine code, "        result = MsgBox(""é¸æŠä¸­ã®ãƒ‡ãƒ¼ã‚¿ã‚’ä¸Šæ›¸ãã—ã¾ã™ã‹ï¼Ÿ"", vbQuestion + vbYesNo, ""ä¸Šæ›¸ãç¢ºèª"")"
+    AddCodeLine code, "        result = MsgBox(""‘I‘ğ’†‚Ìƒf[ƒ^‚ğã‘‚«‚µ‚Ü‚·‚©H"", vbQuestion + vbYesNo, ""ã‘‚«Šm”F"")"
     AddCodeLine code, "        If result <> vbYes Then Exit Sub"
     AddCodeLine code, "        ws.Cells(targetRow, ""B"").Value = Me.txtColumnB.Value"
     AddCodeLine code, "        ws.Cells(targetRow, ""C"").Value = Me.txtColumnC.Value"
     AddCodeLine code, "        ws.Cells(targetRow, ""D"").Value = Me.txtColumnD.Value"
-    AddCodeLine code, "        MsgBox ""ä¸Šæ›¸ãã—ã¾ã—ãŸã€‚"", vbInformation"
+    AddCodeLine code, "        MsgBox ""ã‘‚«‚µ‚Ü‚µ‚½B"", vbInformation"
     AddCodeLine code, "    End If"
     AddCodeLine code, "    ResetForm"
     AddCodeLine code, "End Sub"
@@ -941,21 +941,21 @@ Private Function GetFormCode() As String
     AddCodeLine code, "    Dim targetRow As Long"
     AddCodeLine code, "    Dim result As VbMsgBoxResult"
     AddCodeLine code, "    If SelectedID = 0 Then"
-    AddCodeLine code, "        MsgBox ""å‰Šé™¤ã™ã‚‹ãƒ‡ãƒ¼ã‚¿ã‚’æ¤œç´¢çµæœã‹ã‚‰é¸æŠã—ã¦ãã ã•ã„ã€‚"", vbExclamation"
+    AddCodeLine code, "        MsgBox ""íœ‚·‚éƒf[ƒ^‚ğŒŸõŒ‹‰Ê‚©‚ç‘I‘ğ‚µ‚Ä‚­‚¾‚³‚¢B"", vbExclamation"
     AddCodeLine code, "        Exit Sub"
     AddCodeLine code, "    End If"
-    AddCodeLine code, "    result = MsgBox(""é¸æŠä¸­ã®ãƒ‡ãƒ¼ã‚¿ã‚’å‰Šé™¤ã—ã¾ã™ã‹ï¼Ÿ"" & vbCrLf & ""å‰Šé™¤ã—ãŸãƒ‡ãƒ¼ã‚¿ã¯å…ƒã«æˆ»ã›ã¾ã›ã‚“ã€‚"", vbExclamation + vbYesNo + vbDefaultButton2, ""å‰Šé™¤ç¢ºèª"")"
+    AddCodeLine code, "    result = MsgBox(""‘I‘ğ’†‚Ìƒf[ƒ^‚ğíœ‚µ‚Ü‚·‚©H"" & vbCrLf & ""íœ‚µ‚½ƒf[ƒ^‚ÍŒ³‚É–ß‚¹‚Ü‚¹‚ñB"", vbExclamation + vbYesNo + vbDefaultButton2, ""íœŠm”F"")"
     AddCodeLine code, "    If result <> vbYes Then Exit Sub"
     AddCodeLine code, "    Set ws = ThisWorkbook.Worksheets(TARGET_SHEET)"
     AddCodeLine code, "    targetRow = FindRowByID(ws, SelectedID)"
     AddCodeLine code, "    If targetRow = 0 Then"
-    AddCodeLine code, "        MsgBox ""å‰Šé™¤å¯¾è±¡ã®ãƒ‡ãƒ¼ã‚¿ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã§ã—ãŸã€‚"", vbExclamation"
+    AddCodeLine code, "        MsgBox ""íœ‘ÎÛ‚Ìƒf[ƒ^‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñ‚Å‚µ‚½B"", vbExclamation"
     AddCodeLine code, "        ResetForm"
     AddCodeLine code, "        Exit Sub"
     AddCodeLine code, "    End If"
     AddCodeLine code, "    ws.Rows(targetRow).Delete Shift:=xlUp"
     AddCodeLine code, "    RenumberIDs ws"
-    AddCodeLine code, "    MsgBox ""å‰Šé™¤ã—ã¾ã—ãŸã€‚"", vbInformation"
+    AddCodeLine code, "    MsgBox ""íœ‚µ‚Ü‚µ‚½B"", vbInformation"
     AddCodeLine code, "    ResetForm"
     AddCodeLine code, "End Sub"
     AddCodeLine code, ""
@@ -993,8 +993,8 @@ Private Function GetFormCode() As String
     AddCodeLine code, "                bodyPreview = Replace(bodyPreview, vbLf, "" "")"
     AddCodeLine code, "                bodyPreview = Replace(bodyPreview, vbTab, "" "")"
     AddCodeLine code, "                bodyPreview = Trim$(bodyPreview)"
-    AddCodeLine code, "                If Len(bodyPreview) > 30 Then bodyPreview = Left$(bodyPreview, 30) & ""â€¦"""
-    AddCodeLine code, "                displayText = ""ã€ä»¶åãªã—ï½œID:"" & CStr(ws.Cells(rowNumber, ""A"").Value) & ""ã€‘ "" & bodyPreview"
+    AddCodeLine code, "                If Len(bodyPreview) > 30 Then bodyPreview = Left$(bodyPreview, 30) & ""c"""
+    AddCodeLine code, "                displayText = ""yŒ–¼‚È‚µbID:"" & CStr(ws.Cells(rowNumber, ""A"").Value) & ""z "" & bodyPreview"
     AddCodeLine code, "            End If"
     AddCodeLine code, "            Me.lstResults.AddItem CStr(ws.Cells(rowNumber, ""A"").Value)"
     AddCodeLine code, "            Me.lstResults.List(Me.lstResults.ListCount - 1, 1) = displayText"
@@ -1052,7 +1052,7 @@ Private Function GetFormCode() As String
     AddCodeLine code, "End Sub"
     AddCodeLine code, ""
     AddCodeLine code, "Private Sub SetDefaultButtonCaptions()"
-    AddCodeLine code, "    Me.btnRegister.Caption = ""ç™»éŒ²"""
+    AddCodeLine code, "    Me.btnRegister.Caption = ""“o˜^"""
     AddCodeLine code, "End Sub"
     AddCodeLine code, ""
     AddCodeLine code, "Private Sub SetSearchPlaceholder()"
@@ -1067,7 +1067,7 @@ End Function
 
 
 '============================================================
-' ãƒ•ã‚©ãƒ¼ãƒ ç”¨ã‚³ãƒ¼ãƒ‰ã¸1è¡Œè¿½åŠ 
+' ƒtƒH[ƒ€—pƒR[ƒh‚Ö1s’Ç‰Á
 '============================================================
 Private Sub AddCodeLine(ByRef code As String, ByVal lineText As String)
 
