@@ -115,10 +115,11 @@ Private Sub CreateTemplateManagerForm(ByVal formScale As Double)
     AddListBox designer, "lstResults", 510, 94, 270, 304
 
     currentStep = "ボタンの配置"
-    AddButton designer, "btnRegister", "登録", 18, 410, 105, 32, RGB(37, 99, 235)
-    AddButton designer, "btnDelete", "削除", 138, 410, 105, 32, RGB(220, 38, 38)
-    AddButton designer, "btnClear", "クリア", 258, 410, 105, 32, RGB(100, 116, 139)
-    AddButton designer, "btnExport", "エクスポート", 378, 410, 105, 32, RGB(5, 150, 105)
+    AddButton designer, "btnRegister", "登録", 18, 410, 85, 32, RGB(37, 99, 235)
+    AddButton designer, "btnDelete", "削除", 113, 410, 85, 32, RGB(220, 38, 38)
+    AddButton designer, "btnClear", "クリア", 208, 410, 85, 32, RGB(100, 116, 139)
+    AddButton designer, "btnExport", "エクスポート", 303, 410, 85, 32, RGB(5, 150, 105)
+    AddButton designer, "btnCopyOriginal", "原本を反映", 398, 410, 85, 32, RGB(124, 58, 237)
 
     currentStep = "フォーム処理コードの登録"
     vbComponent.CodeModule.AddFromString GetFormCode()
@@ -254,6 +255,242 @@ ExportError:
         "エクスポートできませんでした。" & vbCrLf & vbCrLf & _
         "エラー内容：" & Err.Description, _
         vbExclamation
+
+End Sub
+
+
+'============================================================
+' フォームの「原本を反映」ボタンから呼び出す転記処理
+' このブックの原本シートを、選択したブックの原本シートへ上書きする
+' 両方のシートがVeryHiddenでも表示状態を変更せず処理できる
+'============================================================
+Public Sub 原本を選択ファイルへ反映する()
+
+    Const msoFileDialogFilePicker As Long = 3
+
+    Dim sourceSheet As Worksheet
+    Dim targetSheet As Worksheet
+    Dim targetWorkbook As Workbook
+    Dim openedWorkbook As Workbook
+    Dim fileDialog As Object
+    Dim selectedPath As String
+    Dim answer As VbMsgBoxResult
+    Dim previousScreenUpdating As Boolean
+    Dim previousEnableEvents As Boolean
+    Dim previousDisplayAlerts As Boolean
+    Dim applicationStateSaved As Boolean
+    Dim targetOpenedByProcedure As Boolean
+    Dim errorNumber As Long
+    Dim errorDescription As String
+
+    On Error GoTo CopyError
+
+    Set sourceSheet = ThisWorkbook.Worksheets("原本")
+    Set fileDialog = Application.FileDialog(msoFileDialogFilePicker)
+
+    With fileDialog
+        .Title = "原本を反映するExcelファイルを選択してください"
+        .AllowMultiSelect = False
+        .Filters.Clear
+        .Filters.Add _
+            "Excelファイル", _
+            "*.xlsx;*.xlsm;*.xlsb;*.xls"
+
+        If Len(ThisWorkbook.Path) > 0 Then
+            .InitialFileName = _
+                ThisWorkbook.Path & Application.PathSeparator
+        End If
+
+        If .Show <> -1 Then Exit Sub
+        selectedPath = CStr(.SelectedItems(1))
+    End With
+
+    If StrComp( _
+        selectedPath, _
+        ThisWorkbook.FullName, _
+        vbTextCompare) = 0 Then
+
+        MsgBox _
+            "現在開いているファイル自身には反映できません。" & vbCrLf & _
+            "別のExcelファイルを選択してください。", _
+            vbExclamation, _
+            "ファイル選択"
+        Exit Sub
+    End If
+
+    Set openedWorkbook = TM_FindOpenWorkbook(selectedPath)
+
+    If Not openedWorkbook Is Nothing Then
+        MsgBox _
+            "選択したファイルは既に開かれています。" & vbCrLf & _
+            "ファイルを閉じてから、もう一度実行してください。", _
+            vbExclamation, _
+            "ファイル確認"
+        Exit Sub
+    End If
+
+    answer = MsgBox( _
+        "次のファイルの「原本」シートを全消去し、" & vbCrLf & _
+        "このファイルの「原本」に置き換えます。" & vbCrLf & vbCrLf & _
+        selectedPath & vbCrLf & vbCrLf & _
+        "処理を続けますか？", _
+        vbQuestion + vbYesNo + vbDefaultButton2, _
+        "原本の反映確認")
+
+    If answer <> vbYes Then Exit Sub
+
+    previousScreenUpdating = Application.ScreenUpdating
+    previousEnableEvents = Application.EnableEvents
+    previousDisplayAlerts = Application.DisplayAlerts
+    applicationStateSaved = True
+
+    '書き込み先のWorkbook_Openを実行し、
+    '「読み取り専用／編集用PW」の確認を表示させる
+    Application.EnableEvents = True
+
+    Set targetWorkbook = Workbooks.Open( _
+        Filename:=selectedPath, _
+        UpdateLinks:=0, _
+        ReadOnly:=False, _
+        IgnoreReadOnlyRecommended:=False)
+    targetOpenedByProcedure = True
+
+    '起動時の確認が終わった後は、転記・保存に伴うイベントを止める
+    Application.EnableEvents = False
+    Application.ScreenUpdating = False
+
+    If targetWorkbook.ReadOnly Then
+        Err.Raise _
+            vbObjectError + 2101, _
+            "原本を選択ファイルへ反映する", _
+            "選択したファイルが読み取り専用で開かれました。" & _
+            vbCrLf & vbCrLf & _
+            "もう一度実行し、起動時の確認で「いいえ」を選んで" & _
+            vbCrLf & _
+            "編集用パスワードを入力してください。"
+    End If
+
+    On Error Resume Next
+    Set targetSheet = targetWorkbook.Worksheets("原本")
+    On Error GoTo CopyError
+
+    If targetSheet Is Nothing Then
+        Err.Raise _
+            vbObjectError + 2102, _
+            "原本を選択ファイルへ反映する", _
+            "選択したファイルに「原本」シートがありません。"
+    End If
+
+    TM_ReplaceWorksheetContents sourceSheet, targetSheet
+
+    targetWorkbook.Save
+    targetWorkbook.Close SaveChanges:=False
+    targetOpenedByProcedure = False
+
+    Application.ScreenUpdating = previousScreenUpdating
+    Application.EnableEvents = previousEnableEvents
+    Application.DisplayAlerts = previousDisplayAlerts
+
+    MsgBox _
+        "選択したファイルへ原本を反映しました。" & vbCrLf & _
+        selectedPath, _
+        vbInformation, _
+        "反映完了"
+    Exit Sub
+
+CopyError:
+    errorNumber = Err.Number
+    errorDescription = Err.Description
+
+    On Error Resume Next
+
+    Application.CutCopyMode = False
+
+    If targetOpenedByProcedure Then
+        Application.DisplayAlerts = False
+        targetWorkbook.Close SaveChanges:=False
+    End If
+
+    If applicationStateSaved Then
+        Application.ScreenUpdating = previousScreenUpdating
+        Application.EnableEvents = previousEnableEvents
+        Application.DisplayAlerts = previousDisplayAlerts
+    End If
+
+    On Error GoTo 0
+
+    MsgBox _
+        "原本を反映できませんでした。" & vbCrLf & vbCrLf & _
+        "エラー番号：" & CStr(errorNumber) & vbCrLf & _
+        "エラー内容：" & errorDescription, _
+        vbExclamation, _
+        "反映エラー"
+
+End Sub
+
+
+'============================================================
+' 指定したファイルが既に開かれているか確認
+'============================================================
+Private Function TM_FindOpenWorkbook( _
+    ByVal targetPath As String) As Workbook
+
+    Dim workbookItem As Workbook
+
+    For Each workbookItem In Application.Workbooks
+        If StrComp( _
+            workbookItem.FullName, _
+            targetPath, _
+            vbTextCompare) = 0 Then
+
+            Set TM_FindOpenWorkbook = workbookItem
+            Exit Function
+        End If
+    Next workbookItem
+
+End Function
+
+
+'============================================================
+' 転記先を全消去し、転記元の使用範囲をそのまま複製
+' セル内容・数式・書式・列幅・行高・非表示状態を引き継ぐ
+'============================================================
+Private Sub TM_ReplaceWorksheetContents( _
+    ByVal sourceSheet As Worksheet, _
+    ByVal targetSheet As Worksheet)
+
+    Dim sourceRange As Range
+    Dim targetRange As Range
+    Dim rowNumber As Long
+    Dim columnNumber As Long
+    Dim lastRow As Long
+    Dim lastColumn As Long
+
+    Set sourceRange = sourceSheet.UsedRange
+    Set targetRange = targetSheet.Range(sourceRange.Address)
+
+    targetSheet.Cells.Clear
+
+    sourceRange.Copy
+    targetRange.PasteSpecial Paste:=xlPasteAll
+    targetRange.PasteSpecial Paste:=xlPasteColumnWidths
+
+    lastRow = sourceRange.Row + sourceRange.Rows.Count - 1
+    lastColumn = sourceRange.Column + sourceRange.Columns.Count - 1
+
+    For rowNumber = sourceRange.Row To lastRow
+        targetSheet.Rows(rowNumber).RowHeight = _
+            sourceSheet.Rows(rowNumber).RowHeight
+        targetSheet.Rows(rowNumber).Hidden = _
+            sourceSheet.Rows(rowNumber).Hidden
+    Next rowNumber
+
+    For columnNumber = sourceRange.Column To lastColumn
+        targetSheet.Columns(columnNumber).Hidden = _
+            sourceSheet.Columns(columnNumber).Hidden
+    Next columnNumber
+
+    Application.CutCopyMode = False
 
 End Sub
 
@@ -720,6 +957,10 @@ Private Function GetFormCode() As String
     AddCodeLine code, ""
     AddCodeLine code, "Private Sub btnExport_Click()"
     AddCodeLine code, "    Application.Run ""'"" & ThisWorkbook.Name & ""'!ExportTemplatesJsonFromForm"""
+    AddCodeLine code, "End Sub"
+    AddCodeLine code, ""
+    AddCodeLine code, "Private Sub btnCopyOriginal_Click()"
+    AddCodeLine code, "    Application.Run ""'"" & ThisWorkbook.Name & ""'!原本を選択ファイルへ反映する"""
     AddCodeLine code, "End Sub"
     AddCodeLine code, ""
     AddCodeLine code, "Private Sub LoadList(ByVal keyword As String)"
