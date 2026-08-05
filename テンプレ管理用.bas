@@ -267,7 +267,6 @@ End Sub
 Public Sub 原本を選択ファイルへ反映する()
 
     Const msoFileDialogFilePicker As Long = 3
-    Const msoAutomationSecurityForceDisable As Long = 3
 
     Dim sourceSheet As Worksheet
     Dim targetSheet As Worksheet
@@ -279,9 +278,7 @@ Public Sub 原本を選択ファイルへ反映する()
     Dim previousScreenUpdating As Boolean
     Dim previousEnableEvents As Boolean
     Dim previousDisplayAlerts As Boolean
-    Dim previousAutomationSecurity As Long
     Dim applicationStateSaved As Boolean
-    Dim automationSecurityChanged As Boolean
     Dim targetOpenedByProcedure As Boolean
     Dim errorNumber As Long
     Dim errorDescription As String
@@ -345,14 +342,11 @@ Public Sub 原本を選択ファイルへ反映する()
     previousScreenUpdating = Application.ScreenUpdating
     previousEnableEvents = Application.EnableEvents
     previousDisplayAlerts = Application.DisplayAlerts
-    previousAutomationSecurity = Application.AutomationSecurity
     applicationStateSaved = True
 
-    Application.ScreenUpdating = False
-    Application.EnableEvents = False
-    Application.AutomationSecurity = _
-        msoAutomationSecurityForceDisable
-    automationSecurityChanged = True
+    '書き込み先のWorkbook_Openを実行し、
+    '「読み取り専用／編集用PW」の確認を表示させる
+    Application.EnableEvents = True
 
     Set targetWorkbook = Workbooks.Open( _
         Filename:=selectedPath, _
@@ -361,17 +355,19 @@ Public Sub 原本を選択ファイルへ反映する()
         IgnoreReadOnlyRecommended:=False)
     targetOpenedByProcedure = True
 
-    Application.AutomationSecurity = previousAutomationSecurity
-    automationSecurityChanged = False
+    '起動時の確認が終わった後は、転記・保存に伴うイベントを止める
+    Application.EnableEvents = False
+    Application.ScreenUpdating = False
 
     If targetWorkbook.ReadOnly Then
         Err.Raise _
             vbObjectError + 2101, _
             "原本を選択ファイルへ反映する", _
             "選択したファイルが読み取り専用で開かれました。" & _
+            vbCrLf & vbCrLf & _
+            "もう一度実行し、起動時の確認で「いいえ」を選んで" & _
             vbCrLf & _
-            "編集用パスワードを入力して開ける状態で、" & _
-            "もう一度実行してください。"
+            "編集用パスワードを入力してください。"
     End If
 
     On Error Resume Next
@@ -407,10 +403,6 @@ CopyError:
     errorDescription = Err.Description
 
     On Error Resume Next
-
-    If automationSecurityChanged Then
-        Application.AutomationSecurity = previousAutomationSecurity
-    End If
 
     Application.CutCopyMode = False
 
