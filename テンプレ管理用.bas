@@ -264,7 +264,7 @@ End Sub
 ' このブックの原本シートを、選択したブックの原本シートへ上書きする
 ' 両方のシートがVeryHiddenでも表示状態を変更せず処理できる
 '============================================================
-Public Sub CopyOriginalSheetToSelectedWorkbook()
+Public Sub 原本を選択ファイルへ反映する()
 
     Const msoFileDialogFilePicker As Long = 3
     Const msoAutomationSecurityForceDisable As Long = 3
@@ -367,7 +367,7 @@ Public Sub CopyOriginalSheetToSelectedWorkbook()
     If targetWorkbook.ReadOnly Then
         Err.Raise _
             vbObjectError + 2101, _
-            "CopyOriginalSheetToSelectedWorkbook", _
+            "原本を選択ファイルへ反映する", _
             "選択したファイルが読み取り専用で開かれました。" & _
             vbCrLf & _
             "編集用パスワードを入力して開ける状態で、" & _
@@ -381,7 +381,7 @@ Public Sub CopyOriginalSheetToSelectedWorkbook()
     If targetSheet Is Nothing Then
         Err.Raise _
             vbObjectError + 2102, _
-            "CopyOriginalSheetToSelectedWorkbook", _
+            "原本を選択ファイルへ反映する", _
             "選択したファイルに「原本」シートがありません。"
     End If
 
@@ -968,7 +968,7 @@ Private Function GetFormCode() As String
     AddCodeLine code, "End Sub"
     AddCodeLine code, ""
     AddCodeLine code, "Private Sub btnCopyOriginal_Click()"
-    AddCodeLine code, "    Application.Run ""'"" & ThisWorkbook.Name & ""'!CopyOriginalSheetToSelectedWorkbook"""
+    AddCodeLine code, "    Application.Run ""'"" & ThisWorkbook.Name & ""'!原本を選択ファイルへ反映する"""
     AddCodeLine code, "End Sub"
     AddCodeLine code, ""
     AddCodeLine code, "Private Sub LoadList(ByVal keyword As String)"
