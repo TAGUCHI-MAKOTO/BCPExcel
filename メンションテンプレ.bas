@@ -7,6 +7,7 @@ Option Explicit
 ' 【前提シート】
 '   原本       A列:ID / B列:件名 / C列:本文 / D列:タグ（1行目は見出し）
 '   休日マスタ A列:休日の日付（見出しの有無は問いません）
+'   リスト     A列:Windowsユーザー名 / B列:表示名
 '
 ' 【使い方】
 '   1. このbasを標準モジュールとしてインポート
@@ -16,6 +17,12 @@ Option Explicit
 ' ============================================================
 
 Private Const FORM_NAME As String = "frmTemplateSelector"
+Private Const USER_LIST_SHEET As String = "リスト"
+Private Const USER_PLACEHOLDER As String = "$name$"
+
+Private mCurrentDisplayName As String
+Private mUserNameInitialized As Boolean
+Private mUserNameWarningShown As Boolean
 
 Public Sub メンションテンプレを作成()
     Dim targetBook As Workbook
@@ -167,8 +174,85 @@ Private Function BuildErrorAdvice(ByVal stage As String, ByVal errNo As Long) As
     End If
 End Function
 
+Public Sub Auto_Open()
+    InitializeCurrentUserName
+End Sub
+
+Public Sub InitializeCurrentUserName()
+    Dim ws As Worksheet
+    Dim loginUserName As String
+    Dim foundCell As Range
+
+    mUserNameInitialized = True
+    mCurrentDisplayName = vbNullString
+
+    loginUserName = Trim$(Environ$("USERNAME"))
+    If Len(loginUserName) = 0 Then
+        ShowUserNameWarning "Windowsのユーザー名を取得できませんでした。"
+        Exit Sub
+    End If
+
+    On Error Resume Next
+    Set ws = ThisWorkbook.Worksheets(USER_LIST_SHEET)
+    Err.Clear
+    On Error GoTo UserNameError
+
+    If ws Is Nothing Then
+        ShowUserNameWarning "シート「リスト」が見つかりません。"
+        Exit Sub
+    End If
+
+    Set foundCell = ws.Columns("A").Find( _
+        What:=loginUserName, _
+        After:=ws.Cells(ws.Rows.Count, "A"), _
+        LookIn:=xlValues, _
+        LookAt:=xlWhole, _
+        SearchOrder:=xlByRows, _
+        SearchDirection:=xlNext, _
+        MatchCase:=False)
+
+    If foundCell Is Nothing Then
+        ShowUserNameWarning "リストシートのA列にWindowsユーザー名が登録されていません。" & _
+                            vbCrLf & "ユーザー名: " & loginUserName
+        Exit Sub
+    End If
+
+    mCurrentDisplayName = Trim$(CStr(ws.Cells(foundCell.Row, "B").Value))
+
+    If Len(mCurrentDisplayName) = 0 Then
+        ShowUserNameWarning "リストシートのB列に表示名が登録されていません。" & _
+                            vbCrLf & "対象行: " & CStr(foundCell.Row)
+    End If
+    Exit Sub
+
+UserNameError:
+    mCurrentDisplayName = vbNullString
+    ShowUserNameWarning "利用者名の取得中にエラーが発生しました。" & _
+                        vbCrLf & Err.Description
+End Sub
+
+Public Function ReplaceUserName(ByVal sourceText As String) As String
+    If Not mUserNameInitialized Then InitializeCurrentUserName
+
+    If Len(mCurrentDisplayName) = 0 Then
+        ReplaceUserName = sourceText
+    Else
+        ReplaceUserName = Replace(sourceText, USER_PLACEHOLDER, _
+                                  mCurrentDisplayName, 1, -1, vbTextCompare)
+    End If
+End Function
+
+Private Sub ShowUserNameWarning(ByVal messageText As String)
+    If mUserNameWarningShown Then Exit Sub
+
+    mUserNameWarningShown = True
+    MsgBox messageText & vbCrLf & vbCrLf & _
+           "$name$は置換せず、そのまま表示します。", vbExclamation
+End Sub
+
 Public Sub メンションテンプレを開く()
     On Error GoTo NotCreated
+    If Not mUserNameInitialized Then InitializeCurrentUserName
     VBA.UserForms.Add(FORM_NAME).Show
     Exit Sub
 NotCreated:
@@ -446,7 +530,7 @@ Private Function BuildFormCode() As String
     AddLine s, "  Set ws = ThisWorkbook.Worksheets(" & q & "原本" & q & ")"
     AddLine s, "  r = CLng(lstTemplate.List(lstTemplate.ListIndex, 3))"
     AddLine s, "  txtSubject.Value = CStr(ws.Cells(r, " & q & "B" & q & ").Value)"
-    AddLine s, "  txtBody.Value = CStr(ws.Cells(r, " & q & "C" & q & ").Value)"
+    AddLine s, "  txtBody.Value = ReplaceUserName(CStr(ws.Cells(r, " & q & "C" & q & ").Value))"
     AddLine s, "End Sub"
 
     AddLine s, "Private Sub RefreshList()"
