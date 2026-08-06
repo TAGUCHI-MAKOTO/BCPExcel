@@ -2,113 +2,113 @@ Attribute VB_Name = "modTemplateFormBuilder"
 Option Explicit
 
 ' ============================================================
-' ãƒ†ãƒ³ãƒ—ãƒ¬ãƒ¼ãƒˆé¸æŠãƒ•ã‚©ãƒ¼ãƒ  è‡ªå‹•ä½œæˆãƒã‚¯ãƒ­
+' ƒeƒ“ƒvƒŒ[ƒg‘I‘ğƒtƒH[ƒ€ ©“®ì¬ƒ}ƒNƒ
 '
-' ã€å‰æã‚·ãƒ¼ãƒˆã€‘
-'   åŸæœ¬       Aåˆ—:ID / Båˆ—:ä»¶å / Cåˆ—:æœ¬æ–‡ / Dåˆ—:ã‚¿ã‚°ï¼ˆ1è¡Œç›®ã¯è¦‹å‡ºã—ï¼‰
-'   ä¼‘æ—¥ãƒã‚¹ã‚¿ Aåˆ—:ä¼‘æ—¥ã®æ—¥ä»˜ï¼ˆè¦‹å‡ºã—ã®æœ‰ç„¡ã¯å•ã„ã¾ã›ã‚“ï¼‰
-'   ãƒªã‚¹ãƒˆ     Aåˆ—:Windowsãƒ¦ãƒ¼ã‚¶ãƒ¼å / Båˆ—:è¡¨ç¤ºå
+' y‘O’ñƒV[ƒgz
+'   Œ´–{       A—ñ:ID / B—ñ:Œ–¼ / C—ñ:–{•¶ / D—ñ:ƒ^ƒOi1s–Ú‚ÍŒ©o‚µj
+'   ‹x“úƒ}ƒXƒ^ A—ñ:‹x“ú‚Ì“ú•tiŒ©o‚µ‚Ì—L–³‚Í–â‚¢‚Ü‚¹‚ñj
+'   ƒŠƒXƒg     A—ñ:Windowsƒ†[ƒU[–¼ / B—ñ:•\¦–¼
 '
-' ã€ä½¿ã„æ–¹ã€‘
-'   1. ã“ã®basã‚’æ¨™æº–ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«ã¨ã—ã¦ã‚¤ãƒ³ãƒãƒ¼ãƒˆ
-'   2. Excelã®ã€ŒVBAãƒ—ãƒ­ã‚¸ã‚§ã‚¯ãƒˆ ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆ ãƒ¢ãƒ‡ãƒ«ã¸ã®ã‚¢ã‚¯ã‚»ã‚¹ã‚’ä¿¡é ¼ã™ã‚‹ã€ã‚’ON
-'   3. ãƒ¡ãƒ³ã‚·ãƒ§ãƒ³ãƒ†ãƒ³ãƒ—ãƒ¬ã‚’ä½œæˆ ã‚’å®Ÿè¡Œï¼ˆåˆå›ã®ã¿ï¼‰
-'   4. ãƒ¡ãƒ³ã‚·ãƒ§ãƒ³ãƒ†ãƒ³ãƒ—ãƒ¬ã‚’é–‹ã ã‚’å®Ÿè¡Œã—ã¦ãƒ•ã‚©ãƒ¼ãƒ ã‚’è¡¨ç¤º
+' yg‚¢•ûz
+'   1. ‚±‚Ìbas‚ğ•W€ƒ‚ƒWƒ…[ƒ‹‚Æ‚µ‚ÄƒCƒ“ƒ|[ƒg
+'   2. Excel‚ÌuVBAƒvƒƒWƒFƒNƒg ƒIƒuƒWƒFƒNƒg ƒ‚ƒfƒ‹‚Ö‚ÌƒAƒNƒZƒX‚ğM—Š‚·‚év‚ğON
+'   3. ƒƒ“ƒVƒ‡ƒ“ƒeƒ“ƒvƒŒ‚ğì¬ ‚ğÀsi‰‰ñ‚Ì‚İj
+'   4. ƒƒ“ƒVƒ‡ƒ“ƒeƒ“ƒvƒŒ‚ğŠJ‚­ ‚ğÀs‚µ‚ÄƒtƒH[ƒ€‚ğ•\¦
 ' ============================================================
 
 Private Const FORM_NAME As String = "frmTemplateSelector"
-Private Const USER_LIST_SHEET As String = "ãƒªã‚¹ãƒˆ"
+Private Const USER_LIST_SHEET As String = "ƒŠƒXƒg"
 Private Const USER_PLACEHOLDER As String = "$name$"
 
 Private mCurrentDisplayName As String
 Private mUserNameInitialized As Boolean
 Private mUserNameWarningShown As Boolean
 
-Public Sub ãƒ¡ãƒ³ã‚·ãƒ§ãƒ³ãƒ†ãƒ³ãƒ—ãƒ¬ã‚’ä½œæˆ()
+Public Sub ƒƒ“ƒVƒ‡ƒ“ƒeƒ“ƒvƒŒ‚ğì¬()
     Dim targetBook As Workbook
     Dim vbProj As Object, vbComp As Object, frm As Object
     Dim stage As String, errNo As Long, errText As String
 
     On Error GoTo CreateError
 
-    stage = "ä½œæˆå…ˆãƒ–ãƒƒã‚¯ã®ç¢ºèª"
+    stage = "ì¬æƒuƒbƒN‚ÌŠm”F"
     Set targetBook = ActiveWorkbook
-    If targetBook Is Nothing Then Err.Raise vbObjectError + 1000, , "ä½œæˆå…ˆã®ãƒ–ãƒƒã‚¯ã‚’å–å¾—ã§ãã¾ã›ã‚“ã€‚"
+    If targetBook Is Nothing Then Err.Raise vbObjectError + 1000, , "ì¬æ‚ÌƒuƒbƒN‚ğæ“¾‚Å‚«‚Ü‚¹‚ñB"
 
     If Len(targetBook.Path) = 0 Then
         Err.Raise vbObjectError + 1001, , _
-                  "å…ˆã«ãƒ–ãƒƒã‚¯ã‚’ã€ŒExcel ãƒã‚¯ãƒ­æœ‰åŠ¹ãƒ–ãƒƒã‚¯ï¼ˆ*.xlsmï¼‰ã€ã¨ã—ã¦ä¿å­˜ã—ã¦ãã ã•ã„ã€‚"
+                  "æ‚ÉƒuƒbƒN‚ğuExcel ƒ}ƒNƒ—LŒøƒuƒbƒNi*.xlsmjv‚Æ‚µ‚Ä•Û‘¶‚µ‚Ä‚­‚¾‚³‚¢B"
     End If
 
-    stage = "ä¸€æ™‚ãƒ•ã‚©ãƒ«ãƒ€ãƒ¼ã®ç¢ºèª"
+    stage = "ˆêƒtƒHƒ‹ƒ_[‚ÌŠm”F"
     PrepareFormTempFolder
 
-    stage = "VBAãƒ—ãƒ­ã‚¸ã‚§ã‚¯ãƒˆã®å–å¾—"
+    stage = "VBAƒvƒƒWƒFƒNƒg‚Ìæ“¾"
     Set vbProj = targetBook.VBProject
 
-    stage = "æ—¢å­˜ãƒ•ã‚©ãƒ¼ãƒ ã®ç¢ºèª"
+    stage = "Šù‘¶ƒtƒH[ƒ€‚ÌŠm”F"
     On Error Resume Next
     vbProj.VBComponents.Remove vbProj.VBComponents(FORM_NAME)
     Err.Clear
     On Error GoTo CreateError
 
-    stage = "UserFormã‚³ãƒ³ãƒãƒ¼ãƒãƒ³ãƒˆã®è¿½åŠ "
+    stage = "UserFormƒRƒ“ƒ|[ƒlƒ“ƒg‚Ì’Ç‰Á"
     Set vbComp = vbProj.VBComponents.Add(3) '3 = MSForm
 
-    stage = "UserFormåã®è¨­å®š"
+    stage = "UserForm–¼‚Ìİ’è"
     vbComp.Name = FORM_NAME
 
-    stage = "UserFormãƒ‡ã‚¶ã‚¤ãƒŠãƒ¼ã®å–å¾—"
+    stage = "UserFormƒfƒUƒCƒi[‚Ìæ“¾"
     Set frm = vbComp.Designer
 
-    stage = "ãƒ•ã‚©ãƒ¼ãƒ æœ¬ä½“ã®ãƒ—ãƒ­ãƒ‘ãƒ†ã‚£è¨­å®š"
+    stage = "ƒtƒH[ƒ€–{‘Ì‚ÌƒvƒƒpƒeƒBİ’è"
     With vbComp
-        .Properties("Caption").Value = "ãƒ†ãƒ³ãƒ—ãƒ¬ãƒ¼ãƒˆé¸æŠ"
+        .Properties("Caption").Value = "ƒeƒ“ƒvƒŒ[ƒg‘I‘ğ"
         .Properties("Width").Value = 1110
         .Properties("Height").Value = 630
         .Properties("BackColor").Value = RGB(246, 237, 241)
         .Properties("StartUpPosition").Value = 1
     End With
 
-    stage = "ä»¶åãƒ»æœ¬æ–‡æ¬„ã®ä½œæˆ"
-    AddLabel frm, "lblSubject", "ä»¶å", 18, 18, 80, 18, True
+    stage = "Œ–¼E–{•¶—“‚Ìì¬"
+    AddLabel frm, "lblSubject", "Œ–¼", 18, 18, 80, 18, True
     AddTextBox frm, "txtSubject", 18, 40, 510, 24, False
-    AddLabel frm, "lblBody", "æœ¬æ–‡", 18, 72, 80, 18, True
+    AddLabel frm, "lblBody", "–{•¶", 18, 72, 80, 18, True
     AddTextBox frm, "txtBody", 18, 94, 510, 486, True
 
-    stage = "å¯¾è±¡æ—¥æ¬„ã®ä½œæˆ"
-    AddLabel frm, "lblDate", "å¯¾è±¡æ—¥", 895, 15, 55, 18, True
+    stage = "‘ÎÛ“ú—“‚Ìì¬"
+    AddLabel frm, "lblDate", "‘ÎÛ“ú", 895, 15, 55, 18, True
     AddTextBox frm, "txtTargetDate", 954, 12, 120, 24, False
 
-    stage = "ãƒ†ãƒ³ãƒ—ãƒ¬ãƒ¼ãƒˆãƒªã‚¹ãƒˆã®ä½œæˆ"
-    AddLabel frm, "lblList", "ãƒ†ãƒ³ãƒ—ãƒ¬ãƒ¼ãƒˆä¸€è¦§ï¼ˆIDé †ï¼‰", 548, 52, 250, 18, True
-    AddLabel frm, "lblCount", "0ä»¶", 1004, 52, 70, 18, False
+    stage = "ƒeƒ“ƒvƒŒ[ƒgƒŠƒXƒg‚Ìì¬"
+    AddLabel frm, "lblList", "ƒeƒ“ƒvƒŒ[ƒgˆê——iID‡j", 548, 52, 250, 18, True
+    AddLabel frm, "lblCount", "0Œ", 1004, 52, 70, 18, False
     frm.Controls("lblCount").TextAlign = 3
     AddHeaderBar frm, 548, 74, 526, 20
     AddHeaderText frm, "lblHeadID", "ID", 554, 76, 34, 16
-    AddHeaderText frm, "lblHeadSubject", "ä»¶å", 599, 76, 264, 16
-    AddHeaderText frm, "lblHeadTag", "ã‚¿ã‚°", 874, 76, 194, 16
+    AddHeaderText frm, "lblHeadSubject", "Œ–¼", 599, 76, 264, 16
+    AddHeaderText frm, "lblHeadTag", "ƒ^ƒO", 874, 76, 194, 16
     AddHeaderDivider frm, "lblHeadSep1", 593, 74, 20
     AddHeaderDivider frm, "lblHeadSep2", 868, 74, 20
     AddListBox frm, "lstTemplate", 548, 93, 526, 398
 
-    stage = "æ¤œç´¢æ¬„ã®ä½œæˆ"
+    stage = "ŒŸõ—“‚Ìì¬"
     AddTextBox frm, "txtSearch", 548, 505, 526, 28, False
-    AddSearchHintLabel frm, "lblSearchHint", "ã‚­ãƒ¼ãƒ¯ãƒ¼ãƒ‰ã‚’å…¥åŠ›", 558, 510, 220, 18
+    AddSearchHintLabel frm, "lblSearchHint", "ƒL[ƒ[ƒh‚ğ“ü—Í", 558, 510, 220, 18
 
-    stage = "çµã‚Šè¾¼ã¿æ“ä½œæ¬„ã®ä½œæˆ"
-    AddCheckBox frm, "chkMark1", "â˜…å‡ºç¤¾", 548, 545, 84, 36
-    AddCheckBox frm, "chkMark2", "â˜†å…¬ä¼‘", 644, 545, 84, 36
-    AddCheckBox frm, "chkMark4", "è‡³æ€¥", 740, 545, 70, 36
-    AddCheckBox frm, "chkSVOnly", "LDãƒ»SVé™", 822, 545, 108, 36
+    stage = "i‚è‚İ‘€ì—“‚Ìì¬"
+    AddCheckBox frm, "chkMark1", "šoĞ", 548, 545, 84, 36
+    AddCheckBox frm, "chkMark2", "™Œö‹x", 644, 545, 84, 36
+    AddCheckBox frm, "chkMark4", "Š‹}", 740, 545, 70, 36
+    AddCheckBox frm, "chkSVOnly", "LDESVŒÀ", 822, 545, 108, 36
 
-    AddButton frm, "btnClear", "ã‚¯ãƒªã‚¢", 944, 545, 130, 36, RGB(219, 188, 202)
+    AddButton frm, "btnClear", "ƒNƒŠƒA", 944, 545, 130, 36, RGB(219, 188, 202)
 
-    stage = "ãƒ•ã‚©ãƒ¼ãƒ å‡¦ç†ã‚³ãƒ¼ãƒ‰ã®ç™»éŒ²"
+    stage = "ƒtƒH[ƒ€ˆ—ƒR[ƒh‚Ì“o˜^"
     vbComp.CodeModule.AddFromString BuildFormCode()
 
-    MsgBox "ãƒ†ãƒ³ãƒ—ãƒ¬ãƒ¼ãƒˆé¸æŠãƒ•ã‚©ãƒ¼ãƒ ã‚’ä½œæˆã—ã¾ã—ãŸã€‚" & vbCrLf & _
-           "æ¬¡å›ã‹ã‚‰ã€Œãƒ¡ãƒ³ã‚·ãƒ§ãƒ³ãƒ†ãƒ³ãƒ—ãƒ¬ã‚’é–‹ãã€ã‚’å®Ÿè¡Œã—ã¦ãã ã•ã„ã€‚", vbInformation
+    MsgBox "ƒeƒ“ƒvƒŒ[ƒg‘I‘ğƒtƒH[ƒ€‚ğì¬‚µ‚Ü‚µ‚½B" & vbCrLf & _
+           "Ÿ‰ñ‚©‚çuƒƒ“ƒVƒ‡ƒ“ƒeƒ“ƒvƒŒ‚ğŠJ‚­v‚ğÀs‚µ‚Ä‚­‚¾‚³‚¢B", vbInformation
     Exit Sub
 
 CreateError:
@@ -117,16 +117,16 @@ CreateError:
 
     On Error Resume Next
     If Not vbComp Is Nothing Then
-        If vbComp.Name <> FORM_NAME Or stage <> "æ—¢å­˜ãƒ•ã‚©ãƒ¼ãƒ ã®ç¢ºèª" Then
+        If vbComp.Name <> FORM_NAME Or stage <> "Šù‘¶ƒtƒH[ƒ€‚ÌŠm”F" Then
             vbProj.VBComponents.Remove vbComp
         End If
     End If
     On Error GoTo 0
 
-    MsgBox "ãƒ•ã‚©ãƒ¼ãƒ ã‚’ä½œæˆã§ãã¾ã›ã‚“ã§ã—ãŸã€‚" & vbCrLf & vbCrLf & _
-           "ç™ºç”Ÿå·¥ç¨‹: " & stage & vbCrLf & _
-           "ã‚¨ãƒ©ãƒ¼ç•ªå·: " & CStr(errNo) & vbCrLf & _
-           "è©³ç´°: " & errText & vbCrLf & vbCrLf & _
+    MsgBox "ƒtƒH[ƒ€‚ğì¬‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B" & vbCrLf & vbCrLf & _
+           "”­¶H’ö: " & stage & vbCrLf & _
+           "ƒGƒ‰[”Ô†: " & CStr(errNo) & vbCrLf & _
+           "Ú×: " & errText & vbCrLf & vbCrLf & _
            BuildErrorAdvice(stage, errNo), vbExclamation
 End Sub
 
@@ -143,7 +143,7 @@ Private Sub PrepareFormTempFolder()
 
         If Len(localTemp) = 0 Or Not fso.FolderExists(localTemp) Then
             Err.Raise 76, , _
-                      "Windowsã®ä¸€æ™‚ãƒ•ã‚©ãƒ«ãƒ€ãƒ¼ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã€‚" & vbCrLf & _
+                      "Windows‚ÌˆêƒtƒHƒ‹ƒ_[‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñB" & vbCrLf & _
                       "TEMP: " & tempPath & vbCrLf & "LOCALAPPDATA\Temp: " & localTemp
         End If
         tempPath = localTemp
@@ -160,24 +160,23 @@ Private Sub PrepareFormTempFolder()
 End Sub
 
 Private Function BuildErrorAdvice(ByVal stage As String, ByVal errNo As Long) As String
-    If stage = "VBAãƒ—ãƒ­ã‚¸ã‚§ã‚¯ãƒˆã®å–å¾—" Then
+    If stage = "VBAƒvƒƒWƒFƒNƒg‚Ìæ“¾" Then
         BuildErrorAdvice = _
-            "ã€ŒVBA ãƒ—ãƒ­ã‚¸ã‚§ã‚¯ãƒˆ ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆ ãƒ¢ãƒ‡ãƒ«ã¸ã®ã‚¢ã‚¯ã‚»ã‚¹ã‚’ä¿¡é ¼ã™ã‚‹ã€ã‚’ONã«ã—ã€" & _
-            "Excelã‚’å®Œå…¨ã«é–‰ã˜ã¦ã‹ã‚‰é–‹ãç›´ã—ã¦ãã ã•ã„ã€‚"
+            "uVBA ƒvƒƒWƒFƒNƒg ƒIƒuƒWƒFƒNƒg ƒ‚ƒfƒ‹‚Ö‚ÌƒAƒNƒZƒX‚ğM—Š‚·‚év‚ğON‚É‚µA" & _
+            "Excel‚ğŠ®‘S‚É•Â‚¶‚Ä‚©‚çŠJ‚«’¼‚µ‚Ä‚­‚¾‚³‚¢B"
     ElseIf errNo = 76 Then
         BuildErrorAdvice = _
-            "ãƒ‘ã‚¹é–¢é€£ã®ã‚¨ãƒ©ãƒ¼ã§ã™ã€‚ãƒ–ãƒƒã‚¯ã‚’PCå†…ã®çŸ­ã„ãƒ‘ã‚¹ï¼ˆä¾‹: C:\ExcelWorkï¼‰ã¸ä¿å­˜ã—ã€" & _
-            "Excelã‚’é–‹ãç›´ã—ã¦ã‹ã‚‰å†å®Ÿè¡Œã—ã¦ãã ã•ã„ã€‚"
+            "ƒpƒXŠÖ˜A‚ÌƒGƒ‰[‚Å‚·BƒuƒbƒN‚ğPC“à‚Ì’Z‚¢ƒpƒXi—á: C:\ExcelWorkj‚Ö•Û‘¶‚µA" & _
+            "Excel‚ğŠJ‚«’¼‚µ‚Ä‚©‚çÄÀs‚µ‚Ä‚­‚¾‚³‚¢B"
     Else
         BuildErrorAdvice = _
-            "ãƒ–ãƒƒã‚¯ãŒ*.xlsmã§ä¿å­˜ã•ã‚Œã¦ã„ã‚‹ã“ã¨ã¨ã€èª­ã¿å–ã‚Šå°‚ç”¨ã«ãªã£ã¦ã„ãªã„ã“ã¨ã‚’ç¢ºèªã—ã¦ãã ã•ã„ã€‚"
+            "ƒuƒbƒN‚ª*.xlsm‚Å•Û‘¶‚³‚ê‚Ä‚¢‚é‚±‚Æ‚ÆA“Ç‚İæ‚èê—p‚É‚È‚Á‚Ä‚¢‚È‚¢‚±‚Æ‚ğŠm”F‚µ‚Ä‚­‚¾‚³‚¢B"
     End If
 End Function
 
 Public Sub Auto_Open()
     InitializeCurrentUserName
 End Sub
-
 Public Sub InitializeCurrentUserName()
     Dim ws As Worksheet
     Dim loginUserName As String
@@ -188,7 +187,7 @@ Public Sub InitializeCurrentUserName()
 
     loginUserName = Trim$(Environ$("USERNAME"))
     If Len(loginUserName) = 0 Then
-        ShowUserNameWarning "Windowsã®ãƒ¦ãƒ¼ã‚¶ãƒ¼åã‚’å–å¾—ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚"
+        ShowUserNameWarning "Windows‚Ìƒ†[ƒU[–¼‚ğæ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B"
         Exit Sub
     End If
 
@@ -198,7 +197,7 @@ Public Sub InitializeCurrentUserName()
     On Error GoTo UserNameError
 
     If ws Is Nothing Then
-        ShowUserNameWarning "ã‚·ãƒ¼ãƒˆã€Œãƒªã‚¹ãƒˆã€ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã€‚"
+        ShowUserNameWarning "ƒV[ƒguƒŠƒXƒgv‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñB"
         Exit Sub
     End If
 
@@ -212,22 +211,22 @@ Public Sub InitializeCurrentUserName()
         MatchCase:=False)
 
     If foundCell Is Nothing Then
-        ShowUserNameWarning "ãƒªã‚¹ãƒˆã‚·ãƒ¼ãƒˆã®Aåˆ—ã«Windowsãƒ¦ãƒ¼ã‚¶ãƒ¼åãŒç™»éŒ²ã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚" & _
-                            vbCrLf & "ãƒ¦ãƒ¼ã‚¶ãƒ¼å: " & loginUserName
+        ShowUserNameWarning "ƒŠƒXƒgƒV[ƒg‚ÌA—ñ‚ÉWindowsƒ†[ƒU[–¼‚ª“o˜^‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB" & _
+                            vbCrLf & "ƒ†[ƒU[–¼: " & loginUserName
         Exit Sub
     End If
 
     mCurrentDisplayName = Trim$(CStr(ws.Cells(foundCell.Row, "B").Value))
 
     If Len(mCurrentDisplayName) = 0 Then
-        ShowUserNameWarning "ãƒªã‚¹ãƒˆã‚·ãƒ¼ãƒˆã®Båˆ—ã«è¡¨ç¤ºåãŒç™»éŒ²ã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚" & _
-                            vbCrLf & "å¯¾è±¡è¡Œ: " & CStr(foundCell.Row)
+        ShowUserNameWarning "ƒŠƒXƒgƒV[ƒg‚ÌB—ñ‚É•\¦–¼‚ª“o˜^‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB" & _
+                            vbCrLf & "‘ÎÛs: " & CStr(foundCell.Row)
     End If
     Exit Sub
 
 UserNameError:
     mCurrentDisplayName = vbNullString
-    ShowUserNameWarning "åˆ©ç”¨è€…åã®å–å¾—ä¸­ã«ã‚¨ãƒ©ãƒ¼ãŒç™ºç”Ÿã—ã¾ã—ãŸã€‚" & _
+    ShowUserNameWarning "—˜—pÒ–¼‚Ìæ“¾’†‚ÉƒGƒ‰[‚ª”­¶‚µ‚Ü‚µ‚½B" & _
                         vbCrLf & Err.Description
 End Sub
 
@@ -247,17 +246,17 @@ Private Sub ShowUserNameWarning(ByVal messageText As String)
 
     mUserNameWarningShown = True
     MsgBox messageText & vbCrLf & vbCrLf & _
-           "$name$ã¯ç½®æ›ã›ãšã€ãã®ã¾ã¾è¡¨ç¤ºã—ã¾ã™ã€‚", vbExclamation
+           "$name$‚Í’uŠ·‚¹‚¸A‚»‚Ì‚Ü‚Ü•\¦‚µ‚Ü‚·B", vbExclamation
 End Sub
 
-Public Sub ãƒ¡ãƒ³ã‚·ãƒ§ãƒ³ãƒ†ãƒ³ãƒ—ãƒ¬ã‚’é–‹ã()
+Public Sub ƒƒ“ƒVƒ‡ƒ“ƒeƒ“ƒvƒŒ‚ğŠJ‚­()
     On Error GoTo NotCreated
     If Not mUserNameInitialized Then InitializeCurrentUserName
     VBA.UserForms.Add(FORM_NAME).Show
     Exit Sub
 NotCreated:
-    MsgBox "ãƒ•ã‚©ãƒ¼ãƒ ãŒã¾ã ä½œæˆã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚" & vbCrLf & _
-           "å…ˆã«ã€Œãƒ¡ãƒ³ã‚·ãƒ§ãƒ³ãƒ†ãƒ³ãƒ—ãƒ¬ã‚’ä½œæˆã€ã‚’å®Ÿè¡Œã—ã¦ãã ã•ã„ã€‚", vbExclamation
+    MsgBox "ƒtƒH[ƒ€‚ª‚Ü‚¾ì¬‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB" & vbCrLf & _
+           "æ‚Éuƒƒ“ƒVƒ‡ƒ“ƒeƒ“ƒvƒŒ‚ğì¬v‚ğÀs‚µ‚Ä‚­‚¾‚³‚¢B", vbExclamation
 End Sub
 
 Private Sub AddLabel(ByVal frm As Object, ByVal nm As String, ByVal cap As String, _
@@ -393,7 +392,7 @@ Private Function BuildFormCode() As String
     AddLine s, "    RefreshList"
     AddLine s, "  Else"
     AddLine s, "    lstTemplate.Clear"
-    AddLine s, "    lblCount.Caption = " & q & "0ä»¶" & q
+    AddLine s, "    lblCount.Caption = " & q & "0Œ" & q
     AddLine s, "    txtSubject.Value = " & q & q
     AddLine s, "    txtBody.Value = " & q & q
     AddLine s, "  End If"
@@ -447,7 +446,7 @@ Private Function BuildFormCode() As String
     AddLine s, "  On Error Resume Next"
     AddLine s, "  targetControl.BackColor = RGB(255, 251, 252)"
     AddLine s, "  On Error GoTo 0"
-    AddLine s, "  MsgBox " & q & "ã‚³ãƒ”ãƒ¼ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚ã‚‚ã†ä¸€åº¦ãŠè©¦ã—ãã ã•ã„ã€‚" & q & ", vbExclamation"
+    AddLine s, "  MsgBox " & q & "ƒRƒs[‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B‚à‚¤ˆê“x‚¨‚µ‚­‚¾‚³‚¢B" & q & ", vbExclamation"
     AddLine s, "End Sub"
 
     AddLine s, "Private Sub FlashCopyHighlight(ByVal targetControl As Object)"
@@ -527,7 +526,7 @@ Private Function BuildFormCode() As String
     AddLine s, "Private Sub lstTemplate_Click()"
     AddLine s, "  Dim ws As Worksheet, r As Long"
     AddLine s, "  If lstTemplate.ListIndex < 0 Then Exit Sub"
-    AddLine s, "  Set ws = ThisWorkbook.Worksheets(" & q & "åŸæœ¬" & q & ")"
+    AddLine s, "  Set ws = ThisWorkbook.Worksheets(" & q & "Œ´–{" & q & ")"
     AddLine s, "  r = CLng(lstTemplate.List(lstTemplate.ListIndex, 3))"
     AddLine s, "  txtSubject.Value = CStr(ws.Cells(r, " & q & "B" & q & ").Value)"
     AddLine s, "  txtBody.Value = ReplaceUserName(CStr(ws.Cells(r, " & q & "C" & q & ").Value))"
@@ -542,12 +541,12 @@ Private Function BuildFormCode() As String
     AddLine s, "  On Error GoTo SheetError"
     AddLine s, "  lstTemplate.Clear: txtSubject.Value = " & q & q & ": txtBody.Value = " & q & q
     AddLine s, "  If Not IsDate(txtTargetDate.Value) Then"
-    AddLine s, "    lblCount.Caption = " & q & "0ä»¶" & q
+    AddLine s, "    lblCount.Caption = " & q & "0Œ" & q
     AddLine s, "    Exit Sub"
     AddLine s, "  End If"
     AddLine s, "  targetDate = DateValue(CDate(txtTargetDate.Value))"
     AddLine s, "  holidayMode = IsHolidayDate(targetDate)"
-    AddLine s, "  Set ws = ThisWorkbook.Worksheets(" & q & "åŸæœ¬" & q & ")"
+    AddLine s, "  Set ws = ThisWorkbook.Worksheets(" & q & "Œ´–{" & q & ")"
     AddLine s, "  lastRow = ws.Cells(ws.Rows.Count, " & q & "A" & q & ").End(xlUp).Row"
     AddLine s, "  keyword = Trim$(CStr(txtSearch.Value))"
     AddLine s, "  markFilter = (chkMark1.Value Or chkMark2.Value Or chkMark4.Value)"
@@ -559,14 +558,14 @@ Private Function BuildFormCode() As String
     AddLine s, "    tag = CStr(ws.Cells(r, " & q & "D" & q & ").Value)"
     AddLine s, "    If Len(Trim$(CStr(idVal))) = 0 Then GoTo ContinueRow"
     AddLine s, "    If holidayMode Then"
-    AddLine s, "      If InStr(1, tag, " & q & "å¹³æ—¥ã®ã¿" & q & ", vbTextCompare) > 0 Then GoTo ContinueRow"
+    AddLine s, "      If InStr(1, tag, " & q & "•½“ú‚Ì‚İ" & q & ", vbTextCompare) > 0 Then GoTo ContinueRow"
     AddLine s, "    Else"
-    AddLine s, "      If InStr(1, tag, " & q & "åœŸæ—¥ã®ã¿" & q & ", vbTextCompare) > 0 Then GoTo ContinueRow"
+    AddLine s, "      If InStr(1, tag, " & q & "“y“ú‚Ì‚İ" & q & ", vbTextCompare) > 0 Then GoTo ContinueRow"
     AddLine s, "    End If"
     AddLine s, "    If chkSVOnly.Value Then"
-    AddLine s, "      If InStr(1, tag, " & q & "SVé™" & q & ", vbTextCompare) = 0 Then GoTo ContinueRow"
+    AddLine s, "      If InStr(1, tag, " & q & "SVŒÀ" & q & ", vbTextCompare) = 0 Then GoTo ContinueRow"
     AddLine s, "    Else"
-    AddLine s, "      If InStr(1, tag, " & q & "SVé™" & q & ", vbTextCompare) > 0 Then GoTo ContinueRow"
+    AddLine s, "      If InStr(1, tag, " & q & "SVŒÀ" & q & ", vbTextCompare) > 0 Then GoTo ContinueRow"
     AddLine s, "    End If"
     AddLine s, "    If keyword <> " & q & q & " Then"
     AddLine s, "      If InStr(1, body, keyword, vbTextCompare) = 0 And InStr(1, tag, keyword, vbTextCompare) = 0 Then GoTo ContinueRow"
@@ -575,17 +574,17 @@ Private Function BuildFormCode() As String
     AddLine s, "      markOK = False"
     AddLine s, "      If chkMark4.Value Then"
     AddLine s, "        If chkMark1.Value Then"
-    AddLine s, "          If InStr(1, body, " & q & "â˜…â˜…â˜…" & q & ", vbBinaryCompare) > 0 Then markOK = True"
+    AddLine s, "          If InStr(1, body, " & q & "ššš" & q & ", vbBinaryCompare) > 0 Then markOK = True"
     AddLine s, "        ElseIf chkMark2.Value Then"
-    AddLine s, "          If InStr(1, body, " & q & "â˜†â˜†â˜†" & q & ", vbBinaryCompare) > 0 Then markOK = True"
+    AddLine s, "          If InStr(1, body, " & q & "™™™" & q & ", vbBinaryCompare) > 0 Then markOK = True"
     AddLine s, "        Else"
-    AddLine s, "          If InStr(1, body, " & q & "â˜…â˜…â˜…" & q & ", vbBinaryCompare) > 0 Then markOK = True"
-    AddLine s, "          If holidayMode And InStr(1, body, " & q & "â˜†â˜†â˜†" & q & ", vbBinaryCompare) > 0 Then markOK = True"
+    AddLine s, "          If InStr(1, body, " & q & "ššš" & q & ", vbBinaryCompare) > 0 Then markOK = True"
+    AddLine s, "          If holidayMode And InStr(1, body, " & q & "™™™" & q & ", vbBinaryCompare) > 0 Then markOK = True"
     AddLine s, "        End If"
     AddLine s, "      ElseIf chkMark1.Value Then"
-    AddLine s, "        If InStr(1, body, " & q & "â˜…" & q & ", vbBinaryCompare) > 0 Then markOK = True"
+    AddLine s, "        If InStr(1, body, " & q & "š" & q & ", vbBinaryCompare) > 0 Then markOK = True"
     AddLine s, "      ElseIf chkMark2.Value Then"
-    AddLine s, "        If InStr(1, body, " & q & "â˜†" & q & ", vbBinaryCompare) > 0 Then markOK = True"
+    AddLine s, "        If InStr(1, body, " & q & "™" & q & ", vbBinaryCompare) > 0 Then markOK = True"
     AddLine s, "      End If"
     AddLine s, "      If Not markOK Then GoTo ContinueRow"
     AddLine s, "    End If"
@@ -608,11 +607,11 @@ Private Function BuildFormCode() As String
     AddLine s, "    lstTemplate.List(lstTemplate.ListCount - 1, 2) = CStr(data(i, 3))"
     AddLine s, "    lstTemplate.List(lstTemplate.ListCount - 1, 3) = CLng(data(i, 4))"
     AddLine s, "  Next i"
-    AddLine s, "  lblCount.Caption = CStr(n) & " & q & "ä»¶" & q
+    AddLine s, "  lblCount.Caption = CStr(n) & " & q & "Œ" & q
     AddLine s, "  Exit Sub"
     AddLine s, "SheetError:"
-    AddLine s, "  lblCount.Caption = " & q & "0ä»¶" & q
-    AddLine s, "  MsgBox " & q & "ã‚·ãƒ¼ãƒˆã€ŒåŸæœ¬ã€ã¾ãŸã¯ã€Œä¼‘æ—¥ãƒã‚¹ã‚¿ã€ã‚’ç¢ºèªã—ã¦ãã ã•ã„ã€‚" & q & " & vbCrLf & Err.Description, vbExclamation"
+    AddLine s, "  lblCount.Caption = " & q & "0Œ" & q
+    AddLine s, "  MsgBox " & q & "ƒV[ƒguŒ´–{v‚Ü‚½‚Íu‹x“úƒ}ƒXƒ^v‚ğŠm”F‚µ‚Ä‚­‚¾‚³‚¢B" & q & " & vbCrLf & Err.Description, vbExclamation"
     AddLine s, "End Sub"
 
     AddLine s, "Private Function IsHolidayDate(ByVal d As Date) As Boolean"
@@ -621,7 +620,7 @@ Private Function BuildFormCode() As String
     AddLine s, "    IsHolidayDate = True"
     AddLine s, "    Exit Function"
     AddLine s, "  End If"
-    AddLine s, "  Set ws = ThisWorkbook.Worksheets(" & q & "ä¼‘æ—¥ãƒã‚¹ã‚¿" & q & ")"
+    AddLine s, "  Set ws = ThisWorkbook.Worksheets(" & q & "‹x“úƒ}ƒXƒ^" & q & ")"
     AddLine s, "  lastRow = ws.Cells(ws.Rows.Count, " & q & "A" & q & ").End(xlUp).Row"
     AddLine s, "  For r = 1 To lastRow"
     AddLine s, "    v = ws.Cells(r, " & q & "A" & q & ").Value"
