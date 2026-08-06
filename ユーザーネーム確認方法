@@ -1,0 +1,5 @@
+コマンドプロンプトで確認
+Windowsキー + R
+cmd と入力してEnter
+次を入力
+echo %USERNAME%
