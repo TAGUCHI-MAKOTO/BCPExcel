@@ -4,13 +4,9 @@ Option Explicit
 ' ============================================================
 ' メンションテンプレ JSON Teams / SharePoint URL連携
 '
-' 【重要】
-'   このモジュールは「メンションテンプレ_JSON自動読込.bas」と同じ
-'   Excelブックへインポートして使用します。
-'
-'   元モジュールのSub/Functionを直接参照せず Application.Run で呼ぶため、
-'   元モジュールが未取込でも「Sub または Function が定義されていません」
-'   のコンパイルエラーにはなりません。
+' 【前提】
+'   このモジュールと「メンションテンプレ_JSON自動読込.bas」を
+'   同じExcelブックへインポートして使用します。
 '
 ' 【初回】
 '   1. メンションテンプレ_JSON自動読込.bas をインポート
@@ -19,14 +15,16 @@ Option Explicit
 ' ============================================================
 
 Private Const FORM_NAME As String = "frmTemplateSelectorJson"
-Private Const CONFIG_NAME As String = "MentionTemplateJsonSourceUrl"
+Private Const ORIGINAL_MODULE_NAME As String = "modTemplateFormBuilderJson"
 Private Const ORIGINAL_FILE_NAME As String = "メンションテンプレ_JSON自動読込.bas"
+Private Const CONFIG_NAME As String = "MentionTemplateJsonSourceUrl"
 Private Const HTTP_TIMEOUT_MS As Long = 15000
 
 Private mTeamsJsonLastError As String
 Private mTeamsJsonLastStatus As Long
 Private mTeamsJsonLastUrl As String
 Private mTeamsJsonLastTargetPath As String
+Private mTeamsJsonModuleCheckError As String
 
 ' ============================================================
 ' 公開マクロ
@@ -178,6 +176,8 @@ Public Sub TeamsJSON_接続状況を確認()
 
     If TeamsJsonOriginalModuleAvailable() Then
         moduleState = "取込済み"
+    ElseIf Len(mTeamsJsonModuleCheckError) > 0 Then
+        moduleState = "確認エラー"
     Else
         moduleState = "未取込"
     End If
@@ -189,6 +189,7 @@ Public Sub TeamsJSON_接続状況を確認()
     End If
 
     sourceUrl = TeamsJsonSourceUrl()
+
     If mTeamsJsonLastStatus > 0 Then
         statusText = CStr(mTeamsJsonLastStatus)
     Else
@@ -211,14 +212,22 @@ End Sub
 ' 元JSONモジュール / UserForm確認
 ' ============================================================
 Private Function TeamsJsonOriginalModuleAvailable() As Boolean
-    Dim dummy As Variant
+    Dim vbComp As Object
 
-    On Error GoTo NotAvailable
-    dummy = Application.Run(TeamsJsonMacroName("JsonTemplateCount"))
-    TeamsJsonOriginalModuleAvailable = True
+    mTeamsJsonModuleCheckError = vbNullString
+    On Error GoTo CheckError
+
+    For Each vbComp In ThisWorkbook.VBProject.VBComponents
+        If StrComp(CStr(vbComp.Name), ORIGINAL_MODULE_NAME, vbTextCompare) = 0 Then
+            TeamsJsonOriginalModuleAvailable = True
+            Exit Function
+        End If
+    Next vbComp
+
     Exit Function
 
-NotAvailable:
+CheckError:
+    mTeamsJsonModuleCheckError = Err.Description
     TeamsJsonOriginalModuleAvailable = False
 End Function
 
@@ -256,11 +265,12 @@ Private Function TeamsJsonUserFormExists() As Boolean
     On Error GoTo CheckError
 
     For Each vbComp In ThisWorkbook.VBProject.VBComponents
-        If StrComp(vbComp.Name, FORM_NAME, vbTextCompare) = 0 Then
+        If StrComp(CStr(vbComp.Name), FORM_NAME, vbTextCompare) = 0 Then
             TeamsJsonUserFormExists = True
             Exit Function
         End If
     Next vbComp
+
     Exit Function
 
 CheckError:
@@ -268,13 +278,23 @@ CheckError:
 End Function
 
 Private Sub TeamsJsonShowOriginalModuleRequired()
-    MsgBox _
-        "元のJSONモジュールが同じExcelブックに見つかりません。" & vbCrLf & vbCrLf & _
-        "先に「" & ORIGINAL_FILE_NAME & "」を" & vbCrLf & _
-        "このTeams連携モジュールと同じVBAプロジェクトへインポートしてください。" & vbCrLf & vbCrLf & _
-        "その後「メンションテンプレ_TeamsJSON版を初期設定」を実行してください。", _
-        vbExclamation, _
-        "元JSONモジュールが必要です"
+    Dim details As String
+
+    If Len(mTeamsJsonModuleCheckError) > 0 Then
+        details = _
+            "元JSONモジュールの有無を確認できませんでした。" & vbCrLf & vbCrLf & _
+            "確認エラー: " & mTeamsJsonModuleCheckError & vbCrLf & vbCrLf & _
+            "Excelの「VBAプロジェクト オブジェクト モデルへのアクセスを信頼する」を" & _
+            "ONにして、Excelを開き直してください。"
+    Else
+        details = _
+            "元のJSONモジュールが同じExcelブックに見つかりません。" & vbCrLf & vbCrLf & _
+            "「" & ORIGINAL_FILE_NAME & "」をこのTeams連携モジュールと" & vbCrLf & _
+            "同じVBAプロジェクトへインポートしてください。" & vbCrLf & vbCrLf & _
+            "VBE上のモジュール名は「" & ORIGINAL_MODULE_NAME & "」です。"
+    End If
+
+    MsgBox details, vbExclamation, "元JSONモジュールの確認"
 End Sub
 
 Private Function TeamsJsonMacroName(ByVal procedureName As String) As String
@@ -427,6 +447,7 @@ Private Function TeamsJsonDownloadUtf8(ByVal requestUrl As String) As String
     Dim httpObject As Object
     Dim responseBody As Variant
     Dim firstError As String
+    Dim secondError As String
 
     On Error GoTo XmlHttpError
 
@@ -478,6 +499,8 @@ XmlHttpError:
     Exit Function
 
 WinHttpError:
+    secondError = Err.Description
+
     If mTeamsJsonLastStatus = 401 Or mTeamsJsonLastStatus = 403 Then
         Err.Raise vbObjectError + 2412, , _
                   "SharePoint側でMicrosoft 365認証が必要です（HTTP " & _
@@ -487,7 +510,7 @@ WinHttpError:
     Err.Raise vbObjectError + 2413, , _
               "URLからJSONを取得できませんでした。" & vbCrLf & _
               "XMLHTTP: " & firstError & vbCrLf & _
-              "WinHTTP: " & Err.Description
+              "WinHTTP: " & secondError
 End Function
 
 Private Function TeamsJsonBytesToUtf8(ByVal responseBody As Variant) As String
