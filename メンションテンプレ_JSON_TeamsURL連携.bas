@@ -4,28 +4,23 @@ Option Explicit
 ' ============================================================
 ' メンションテンプレ JSON Teams / SharePoint URL連携
 '
-' 【目的】
-'   Teamsチャネルへ配置したテンプレート.jsonをURLから取得し、
-'   既存の「メンションテンプレ_JSON自動読込.bas」で利用します。
+' 【重要】
+'   このモジュールは「メンションテンプレ_JSON自動読込.bas」と同じ
+'   Excelブックへインポートして使用します。
+'
+'   元モジュールのSub/Functionを直接参照せず Application.Run で呼ぶため、
+'   元モジュールが未取込でも「Sub または Function が定義されていません」
+'   のコンパイルエラーにはなりません。
 '
 ' 【初回】
-'   1. 「メンションテンプレ_JSON自動読込.bas」と本basを同じブックへインポート
-'   2. 「TeamsJSON_URLを設定」を実行
-'   3. 「メンションテンプレ_TeamsJSON版を開く」を実行
-'
-' 【今回の修正】
-'   Teams版を開いた時にJSON版UserFormが未作成なら、
-'   「メンションテンプレ_JSON版を作成」を自動実行してから開きます。
-'
-' 【注意】
-'   Teamsチャネルのファイル実体はSharePointです。
-'   Microsoft 365の対話型サインインが必要なURLは、
-'   VBAのHTTP通信だけでは取得できない場合があります。
-'   取得失敗時は既存のローカルJSONを残して使用します。
+'   1. メンションテンプレ_JSON自動読込.bas をインポート
+'   2. このモジュールをインポート
+'   3. メンションテンプレ_TeamsJSON版を初期設定 を実行
 ' ============================================================
 
-Private Const CONFIG_NAME As String = "MentionTemplateJsonSourceUrl"
 Private Const FORM_NAME As String = "frmTemplateSelectorJson"
+Private Const CONFIG_NAME As String = "MentionTemplateJsonSourceUrl"
+Private Const ORIGINAL_FILE_NAME As String = "メンションテンプレ_JSON自動読込.bas"
 Private Const HTTP_TIMEOUT_MS As Long = 15000
 
 Private mTeamsJsonLastError As String
@@ -36,108 +31,12 @@ Private mTeamsJsonLastTargetPath As String
 ' ============================================================
 ' 公開マクロ
 ' ============================================================
-Public Sub TeamsJSON_URLを設定()
-    Dim currentUrl As String
-    Dim inputUrl As String
-
-    currentUrl = TeamsJsonSourceUrl()
-
-    inputUrl = Trim$(InputBox( _
-        "TeamsチャネルのJSONファイルを「SharePointで開く」から開き、" & vbCrLf & _
-        "SharePoint側のファイルURLを貼り付けてください。" & vbCrLf & vbCrLf & _
-        "※ teams.microsoft.com の画面URLではなく、" & vbCrLf & _
-        "   tenant.sharepoint.com 形式のURLを推奨します。", _
-        "Teams JSON URL設定", _
-        currentUrl))
-
-    If Len(inputUrl) = 0 Then Exit Sub
-
-    If Len(inputUrl) >= 250 Then
-        MsgBox _
-            "URLが長いため、入力欄では途中で切れる可能性があります。" & vbCrLf & vbCrLf & _
-            "URLをExcelのセルへ貼り付け、そのセルを選択してから" & vbCrLf & _
-            "「TeamsJSON_URLを選択セルから設定」を実行してください。", _
-            vbExclamation, _
-            "Teams JSON URL設定"
-        Exit Sub
-    End If
-
-    If Not TeamsJsonValidateSourceUrl(inputUrl) Then Exit Sub
-
-    TeamsJsonSaveSourceUrl inputUrl
-
-    MsgBox _
-        "JSONの参照URLを保存しました。", _
-        vbInformation, _
-        "Teams JSON URL設定"
-End Sub
-
-Public Sub TeamsJSON_URLを選択セルから設定()
-    Dim inputUrl As String
-
-    On Error GoTo CellError
-
-    If TypeName(Selection) <> "Range" Then
-        MsgBox _
-            "SharePointのURLを入力したセルを1つ選択してから実行してください。", _
-            vbExclamation, _
-            "Teams JSON URL設定"
-        Exit Sub
-    End If
-
-    If Selection.Cells.CountLarge <> 1 Then
-        MsgBox _
-            "URLを入力したセルを1つだけ選択してください。", _
-            vbExclamation, _
-            "Teams JSON URL設定"
-        Exit Sub
-    End If
-
-    inputUrl = Trim$(CStr(Selection.Value2))
-
-    If Len(inputUrl) = 0 Then
-        MsgBox _
-            "選択セルにURLが入力されていません。", _
-            vbExclamation, _
-            "Teams JSON URL設定"
-        Exit Sub
-    End If
-
-    If Not TeamsJsonValidateSourceUrl(inputUrl) Then Exit Sub
-
-    TeamsJsonSaveSourceUrl inputUrl
-
-    MsgBox _
-        "選択セルからJSONの参照URLを保存しました。", _
-        vbInformation, _
-        "Teams JSON URL設定"
-    Exit Sub
-
-CellError:
-    MsgBox _
-        "選択セルからURLを設定できませんでした。" & vbCrLf & vbCrLf & _
-        Err.Description, _
-        vbExclamation, _
-        "Teams JSON URL設定"
-End Sub
-
-Public Sub TeamsJSON_URL設定をクリア()
-    On Error Resume Next
-    ThisWorkbook.Names(CONFIG_NAME).Delete
-    On Error GoTo 0
-
-    mTeamsJsonLastError = vbNullString
-    mTeamsJsonLastStatus = 0
-    mTeamsJsonLastUrl = vbNullString
-
-    MsgBox _
-        "Teams JSON URL設定をクリアしました。" & vbCrLf & _
-        "以後は既存のローカルJSON読込のみ使用します。", _
-        vbInformation, _
-        "Teams JSON URL設定"
-End Sub
-
 Public Sub メンションテンプレ_TeamsJSON版を初期設定()
+    If Not TeamsJsonOriginalModuleAvailable() Then
+        TeamsJsonShowOriginalModuleRequired
+        Exit Sub
+    End If
+
     If Not TeamsJsonEnsureUserForm() Then Exit Sub
     TeamsJSON_URLを設定
 End Sub
@@ -145,7 +44,11 @@ End Sub
 Public Sub メンションテンプレ_TeamsJSON版を開く()
     Dim sourceUrl As String
 
-    ' JSON版UserFormがまだ存在しない場合は自動作成する。
+    If Not TeamsJsonOriginalModuleAvailable() Then
+        TeamsJsonShowOriginalModuleRequired
+        Exit Sub
+    End If
+
     If Not TeamsJsonEnsureUserForm() Then Exit Sub
 
     sourceUrl = TeamsJsonSourceUrl()
@@ -166,33 +69,117 @@ Public Sub メンションテンプレ_TeamsJSON版を開く()
             "Teams JSON"
     End If
 
-    メンションテンプレ_JSON版を開く
+    On Error GoTo OpenError
+    Application.Run TeamsJsonMacroName("メンションテンプレ_JSON版を開く")
+    Exit Sub
+
+OpenError:
+    MsgBox _
+        "テンプレート選択フォームを開けませんでした。" & vbCrLf & vbCrLf & _
+        Err.Description, _
+        vbExclamation, _
+        "Teams JSON"
+End Sub
+
+Public Sub TeamsJSON_URLを設定()
+    Dim currentUrl As String
+    Dim inputUrl As String
+
+    currentUrl = TeamsJsonSourceUrl()
+
+    inputUrl = Trim$(InputBox( _
+        "Teamsチャネルのテンプレート.jsonを「SharePointで開く」で表示し、" & vbCrLf & _
+        "SharePoint側のファイルURLを貼り付けてください。" & vbCrLf & vbCrLf & _
+        "※ URLが長い場合はセルへ貼り付けて、" & vbCrLf & _
+        "   「TeamsJSON_URLを選択セルから設定」を使用してください。", _
+        "Teams JSON URL設定", _
+        currentUrl))
+
+    If Len(inputUrl) = 0 Then Exit Sub
+
+    If Len(inputUrl) >= 250 Then
+        MsgBox _
+            "URLが長いため、入力欄では途中で切れる可能性があります。" & vbCrLf & vbCrLf & _
+            "URLをセルへ貼り付け、そのセルを選択してから" & vbCrLf & _
+            "「TeamsJSON_URLを選択セルから設定」を実行してください。", _
+            vbExclamation, _
+            "Teams JSON URL設定"
+        Exit Sub
+    End If
+
+    If Not TeamsJsonValidateSourceUrl(inputUrl) Then Exit Sub
+
+    TeamsJsonSaveSourceUrl inputUrl
+    MsgBox "JSONの参照URLを保存しました。", vbInformation, "Teams JSON URL設定"
+End Sub
+
+Public Sub TeamsJSON_URLを選択セルから設定()
+    Dim inputUrl As String
+
+    On Error GoTo CellError
+
+    If TypeName(Selection) <> "Range" Then
+        MsgBox "SharePointのURLを入力したセルを選択してください。", vbExclamation
+        Exit Sub
+    End If
+
+    If Selection.Cells.CountLarge <> 1 Then
+        MsgBox "URLを入力したセルを1つだけ選択してください。", vbExclamation
+        Exit Sub
+    End If
+
+    inputUrl = Trim$(CStr(Selection.Value2))
+    If Len(inputUrl) = 0 Then
+        MsgBox "選択セルにURLが入力されていません。", vbExclamation
+        Exit Sub
+    End If
+
+    If Not TeamsJsonValidateSourceUrl(inputUrl) Then Exit Sub
+
+    TeamsJsonSaveSourceUrl inputUrl
+    MsgBox "選択セルからJSONの参照URLを保存しました。", vbInformation, "Teams JSON URL設定"
+    Exit Sub
+
+CellError:
+    MsgBox _
+        "選択セルからURLを設定できませんでした。" & vbCrLf & vbCrLf & _
+        Err.Description, _
+        vbExclamation, _
+        "Teams JSON URL設定"
+End Sub
+
+Public Sub TeamsJSON_URL設定をクリア()
+    On Error Resume Next
+    ThisWorkbook.Names(CONFIG_NAME).Delete
+    On Error GoTo 0
+
+    mTeamsJsonLastError = vbNullString
+    mTeamsJsonLastStatus = 0
+    mTeamsJsonLastUrl = vbNullString
+    mTeamsJsonLastTargetPath = vbNullString
+
+    MsgBox "Teams JSON URL設定をクリアしました。", vbInformation, "Teams JSON URL設定"
 End Sub
 
 Public Sub TeamsJSONを今すぐ同期()
-    If TeamsJsonSync(True) Then
-        JsonTemplateLoadLatest False, True
+    If Not TeamsJsonOriginalModuleAvailable() Then
+        TeamsJsonShowOriginalModuleRequired
+        Exit Sub
     End If
+
+    Call TeamsJsonSync(True)
 End Sub
 
 Public Sub TeamsJSON_接続状況を確認()
-    Dim sourceUrl As String
-    Dim normalizedUrl As String
-    Dim targetPath As String
-    Dim localState As String
+    Dim moduleState As String
     Dim formState As String
-    Dim resultText As String
+    Dim sourceUrl As String
+    Dim statusText As String
 
-    On Error GoTo DiagnosticError
-
-    sourceUrl = TeamsJsonSourceUrl()
-    If Len(sourceUrl) > 0 Then normalizedUrl = TeamsJsonNormalizeDownloadUrl(sourceUrl)
-
-    targetPath = JsonTemplateFilePath()
-    If TeamsJsonFileExists(targetPath) Then
-        localState = "あり"
+    If TeamsJsonOriginalModuleAvailable() Then
+        moduleState = "取込済み"
     Else
-        localState = "なし"
+        moduleState = "未取込"
     End If
 
     If TeamsJsonUserFormExists() Then
@@ -201,30 +188,40 @@ Public Sub TeamsJSON_接続状況を確認()
         formState = "未作成"
     End If
 
-    resultText = _
-        "【Teams JSON接続状況】" & vbCrLf & vbCrLf & _
-        "UserForm: " & formState & vbCrLf & _
-        "設定URL: " & IIf(Len(sourceUrl) > 0, sourceUrl, "未設定") & vbCrLf & _
-        "取得URL: " & IIf(Len(normalizedUrl) > 0, normalizedUrl, "未設定") & vbCrLf & vbCrLf & _
-        "ローカル保存先: " & targetPath & vbCrLf & _
-        "ローカルJSON: " & localState & vbCrLf & vbCrLf & _
-        "直近HTTP状態: " & IIf(mTeamsJsonLastStatus > 0, CStr(mTeamsJsonLastStatus), "未実行") & vbCrLf & _
-        "直近エラー: " & IIf(Len(mTeamsJsonLastError) > 0, mTeamsJsonLastError, "なし")
+    sourceUrl = TeamsJsonSourceUrl()
+    If mTeamsJsonLastStatus > 0 Then
+        statusText = CStr(mTeamsJsonLastStatus)
+    Else
+        statusText = "未実行"
+    End If
 
-    MsgBox resultText, vbInformation, "Teams JSON接続状況"
-    Exit Sub
-
-DiagnosticError:
     MsgBox _
-        "Teams JSONの接続状況を確認できませんでした。" & vbCrLf & vbCrLf & _
-        Err.Description, _
-        vbExclamation, _
+        "【Teams JSON接続状況】" & vbCrLf & vbCrLf & _
+        "元JSONモジュール: " & moduleState & vbCrLf & _
+        "UserForm: " & formState & vbCrLf & _
+        "設定URL: " & IIf(Len(sourceUrl) > 0, sourceUrl, "未設定") & vbCrLf & vbCrLf & _
+        "直近HTTP状態: " & statusText & vbCrLf & _
+        "直近保存先: " & IIf(Len(mTeamsJsonLastTargetPath) > 0, mTeamsJsonLastTargetPath, "未実行") & vbCrLf & _
+        "直近エラー: " & IIf(Len(mTeamsJsonLastError) > 0, mTeamsJsonLastError, "なし"), _
+        vbInformation, _
         "Teams JSON接続状況"
 End Sub
 
 ' ============================================================
-' UserFormの自動作成
+' 元JSONモジュール / UserForm確認
 ' ============================================================
+Private Function TeamsJsonOriginalModuleAvailable() As Boolean
+    Dim dummy As Variant
+
+    On Error GoTo NotAvailable
+    dummy = Application.Run(TeamsJsonMacroName("JsonTemplateCount"))
+    TeamsJsonOriginalModuleAvailable = True
+    Exit Function
+
+NotAvailable:
+    TeamsJsonOriginalModuleAvailable = False
+End Function
+
 Private Function TeamsJsonEnsureUserForm() As Boolean
     On Error GoTo EnsureError
 
@@ -233,12 +230,10 @@ Private Function TeamsJsonEnsureUserForm() As Boolean
         Exit Function
     End If
 
-    ' 元モジュールの既存作成処理をそのまま利用する。
-    メンションテンプレ_JSON版を作成
+    Application.Run TeamsJsonMacroName("メンションテンプレ_JSON版を作成")
 
     If Not TeamsJsonUserFormExists() Then
-        Err.Raise vbObjectError + 2450, , _
-                  "UserFormを作成できませんでした。"
+        Err.Raise vbObjectError + 2450, , "UserFormを作成できませんでした。"
     End If
 
     TeamsJsonEnsureUserForm = True
@@ -266,11 +261,25 @@ Private Function TeamsJsonUserFormExists() As Boolean
             Exit Function
         End If
     Next vbComp
-
     Exit Function
 
 CheckError:
     TeamsJsonUserFormExists = False
+End Function
+
+Private Sub TeamsJsonShowOriginalModuleRequired()
+    MsgBox _
+        "元のJSONモジュールが同じExcelブックに見つかりません。" & vbCrLf & vbCrLf & _
+        "先に「" & ORIGINAL_FILE_NAME & "」を" & vbCrLf & _
+        "このTeams連携モジュールと同じVBAプロジェクトへインポートしてください。" & vbCrLf & vbCrLf & _
+        "その後「メンションテンプレ_TeamsJSON版を初期設定」を実行してください。", _
+        vbExclamation, _
+        "元JSONモジュールが必要です"
+End Sub
+
+Private Function TeamsJsonMacroName(ByVal procedureName As String) As String
+    TeamsJsonMacroName = _
+        "'" & Replace(ThisWorkbook.Name, "'", "''") & "'!" & procedureName
 End Function
 
 ' ============================================================
@@ -303,8 +312,6 @@ Private Sub TeamsJsonSaveSourceUrl(ByVal sourceUrl As String)
     Dim refersText As String
 
     sourceUrl = Trim$(sourceUrl)
-    If Len(sourceUrl) = 0 Then Exit Sub
-
     refersText = "=""" & Replace(sourceUrl, """", """""") & """"
 
     On Error Resume Next
@@ -319,8 +326,7 @@ Private Sub TeamsJsonSaveSourceUrl(ByVal sourceUrl As String)
 
 SaveError:
     Err.Raise vbObjectError + 2400, , _
-              "JSON URL設定をブックへ保存できませんでした。" & vbCrLf & _
-              Err.Description
+              "JSON URL設定をブックへ保存できませんでした。" & vbCrLf & Err.Description
 End Sub
 
 Private Function TeamsJsonValidateSourceUrl(ByVal sourceUrl As String) As Boolean
@@ -328,8 +334,7 @@ Private Function TeamsJsonValidateSourceUrl(ByVal sourceUrl As String) As Boolea
 
     If InStr(1, sourceUrl, "teams.microsoft.com", vbTextCompare) > 0 Then
         MsgBox _
-            "Teamsアプリの画面URLが入力されています。" & vbCrLf & vbCrLf & _
-            "対象JSONを「SharePointで開く」で表示し、" & vbCrLf & _
+            "Teamsアプリの画面URLではなく、対象ファイルを「SharePointで開く」で表示し、" & vbCrLf & _
             "SharePoint側のファイルURLを設定してください。", _
             vbExclamation, _
             "Teams JSON URL設定"
@@ -338,10 +343,7 @@ Private Function TeamsJsonValidateSourceUrl(ByVal sourceUrl As String) As Boolea
 
     If InStr(1, sourceUrl, "http://", vbTextCompare) <> 1 _
        And InStr(1, sourceUrl, "https://", vbTextCompare) <> 1 Then
-        MsgBox _
-            "URLの形式が正しくありません。", _
-            vbExclamation, _
-            "Teams JSON URL設定"
+        MsgBox "http:// または https:// で始まるURLを設定してください。", vbExclamation
         Exit Function
     End If
 
@@ -349,16 +351,15 @@ Private Function TeamsJsonValidateSourceUrl(ByVal sourceUrl As String) As Boolea
 End Function
 
 ' ============================================================
-' 同期本体
+' 同期
 ' ============================================================
-Public Function TeamsJsonSync( _
-    Optional ByVal showResult As Boolean = False) As Boolean
-
+Public Function TeamsJsonSync(Optional ByVal showResult As Boolean = False) As Boolean
     Dim sourceUrl As String
     Dim requestUrl As String
     Dim targetPath As String
     Dim tempPath As String
     Dim jsonText As String
+    Dim dummy As Variant
 
     On Error GoTo SyncError
 
@@ -369,8 +370,7 @@ Public Function TeamsJsonSync( _
 
     sourceUrl = TeamsJsonSourceUrl()
     If Len(sourceUrl) = 0 Then
-        Err.Raise vbObjectError + 2401, , _
-                  "Teams JSON URLが未設定です。"
+        Err.Raise vbObjectError + 2401, , "Teams JSON URLが未設定です。"
     End If
 
     requestUrl = TeamsJsonNormalizeDownloadUrl(sourceUrl)
@@ -379,15 +379,19 @@ Public Function TeamsJsonSync( _
     jsonText = TeamsJsonDownloadUtf8(requestUrl)
     TeamsJsonValidateDownloadedText jsonText
 
-    targetPath = JsonTemplateFilePath()
-    mTeamsJsonLastTargetPath = targetPath
-    TeamsJsonEnsureParentFolder targetPath
+    targetPath = CStr(Application.Run(TeamsJsonMacroName("JsonTemplateFilePath")))
+    If Len(Trim$(targetPath)) = 0 Then
+        Err.Raise vbObjectError + 2402, , "JSONの保存先を取得できませんでした。"
+    End If
 
+    mTeamsJsonLastTargetPath = targetPath
     tempPath = targetPath & ".download.tmp"
+
     TeamsJsonDeleteIfExists tempPath
     TeamsJsonWriteUtf8Text tempPath, jsonText
-
     TeamsJsonReplaceFileSafely tempPath, targetPath
+
+    dummy = Application.Run(TeamsJsonMacroName("JsonTemplateLoadLatest"), False, True)
 
     TeamsJsonSync = True
 
@@ -423,7 +427,6 @@ Private Function TeamsJsonDownloadUtf8(ByVal requestUrl As String) As String
     Dim httpObject As Object
     Dim responseBody As Variant
     Dim firstError As String
-    Dim secondError As String
 
     On Error GoTo XmlHttpError
 
@@ -475,8 +478,6 @@ XmlHttpError:
     Exit Function
 
 WinHttpError:
-    secondError = Err.Description
-
     If mTeamsJsonLastStatus = 401 Or mTeamsJsonLastStatus = 403 Then
         Err.Raise vbObjectError + 2412, , _
                   "SharePoint側でMicrosoft 365認証が必要です（HTTP " & _
@@ -486,7 +487,7 @@ WinHttpError:
     Err.Raise vbObjectError + 2413, , _
               "URLからJSONを取得できませんでした。" & vbCrLf & _
               "XMLHTTP: " & firstError & vbCrLf & _
-              "WinHTTP: " & secondError
+              "WinHTTP: " & Err.Description
 End Function
 
 Private Function TeamsJsonBytesToUtf8(ByVal responseBody As Variant) As String
@@ -507,9 +508,7 @@ Private Function TeamsJsonBytesToUtf8(ByVal responseBody As Variant) As String
     End With
 
     If Len(loadedText) > 0 Then
-        If AscW(Left$(loadedText, 1)) = &HFEFF Then
-            loadedText = Mid$(loadedText, 2)
-        End If
+        If AscW(Left$(loadedText, 1)) = &HFEFF Then loadedText = Mid$(loadedText, 2)
     End If
 
     TeamsJsonBytesToUtf8 = loadedText
@@ -520,7 +519,6 @@ Private Function TeamsJsonNormalizeDownloadUrl(ByVal sourceUrl As String) As Str
 
     normalizedUrl = Trim$(sourceUrl)
     normalizedUrl = Replace(normalizedUrl, "&amp;", "&", 1, -1, vbTextCompare)
-
     normalizedUrl = Replace(normalizedUrl, "?web=1", "?download=1", 1, -1, vbTextCompare)
     normalizedUrl = Replace(normalizedUrl, "&web=1", "&download=1", 1, -1, vbTextCompare)
 
@@ -540,10 +538,8 @@ Private Sub TeamsJsonValidateDownloadedText(ByVal jsonText As String)
     Dim lowerText As String
 
     trimmedText = Trim$(jsonText)
-
     If Len(trimmedText) = 0 Then
-        Err.Raise vbObjectError + 2420, , _
-                  "取得したファイルが空です。"
+        Err.Raise vbObjectError + 2420, , "取得したファイルが空です。"
     End If
 
     lowerText = LCase$(Left$(trimmedText, 500))
@@ -584,7 +580,6 @@ Private Sub TeamsJsonReplaceFileSafely(ByVal tempPath As String, ByVal targetPat
     Dim backupPath As String
 
     backupPath = targetPath & ".bak"
-
     On Error GoTo ReplaceError
 
     If TeamsJsonFileExists(targetPath) Then
@@ -604,22 +599,7 @@ ReplaceError:
     On Error GoTo 0
 
     Err.Raise vbObjectError + 2430, , _
-              "取得したJSONを保存先へ反映できませんでした。" & vbCrLf & _
-              targetPath
-End Sub
-
-Private Sub TeamsJsonEnsureParentFolder(ByVal filePath As String)
-    Dim fso As Object
-    Dim parentFolder As String
-
-    Set fso = CreateObject("Scripting.FileSystemObject")
-    parentFolder = fso.GetParentFolderName(filePath)
-
-    If Len(parentFolder) = 0 Or Not fso.FolderExists(parentFolder) Then
-        Err.Raise vbObjectError + 2431, , _
-                  "JSONの保存フォルダーが見つかりません。" & vbCrLf & _
-                  parentFolder
-    End If
+              "取得したJSONを保存先へ反映できませんでした。" & vbCrLf & targetPath
 End Sub
 
 Private Function TeamsJsonFileExists(ByVal filePath As String) As Boolean
