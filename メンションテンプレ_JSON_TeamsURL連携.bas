@@ -6,27 +6,26 @@ Option Explicit
 '
 ' 【目的】
 '   Teamsチャネルへ配置したテンプレート.jsonをURLから取得し、
-'   既存の「メンションテンプレ_JSON自動読込.bas」で読める場所へ同期します。
+'   既存の「メンションテンプレ_JSON自動読込.bas」で利用します。
 '
-' 【重要】
-'   TeamsチャネルのファイルはSharePointに保存されます。
-'   SharePoint側でMicrosoft 365の対話型サインインが必要なURLは、
+' 【初回】
+'   1. 「メンションテンプレ_JSON自動読込.bas」と本basを同じブックへインポート
+'   2. 「TeamsJSON_URLを設定」を実行
+'   3. 「メンションテンプレ_TeamsJSON版を開く」を実行
+'
+' 【今回の修正】
+'   Teams版を開いた時にJSON版UserFormが未作成なら、
+'   「メンションテンプレ_JSON版を作成」を自動実行してから開きます。
+'
+' 【注意】
+'   Teamsチャネルのファイル実体はSharePointです。
+'   Microsoft 365の対話型サインインが必要なURLは、
 '   VBAのHTTP通信だけでは取得できない場合があります。
-'   その場合は既存のローカルJSONを壊さず、そのまま使用します。
-'
-' 【初回設定】
-'   1. このbasを、既存の「メンションテンプレ_JSON自動読込.bas」と同じブックへインポート
-'   2. 「TeamsJSON_URLを設定」を実行し、SharePoint上のJSONファイルURLを貼り付ける
-'      （長いURLはセルへ貼り付けて「TeamsJSON_URLを選択セルから設定」）
-'   3. 以後は「メンションテンプレ_TeamsJSON版を開く」を使用する
-'
-' 【推奨URL】
-'   Teamsの teams.microsoft.com の画面URLではなく、
-'   「SharePointで開く」から取得したファイルのSharePoint URLを使用してください。
+'   取得失敗時は既存のローカルJSONを残して使用します。
 ' ============================================================
 
 Private Const CONFIG_NAME As String = "MentionTemplateJsonSourceUrl"
-Private Const JSON_FILE_NAME As String = "テンプレート.json"
+Private Const FORM_NAME As String = "frmTemplateSelectorJson"
 Private Const HTTP_TIMEOUT_MS As Long = 15000
 
 Private mTeamsJsonLastError As String
@@ -45,7 +44,7 @@ Public Sub TeamsJSON_URLを設定()
 
     inputUrl = Trim$(InputBox( _
         "TeamsチャネルのJSONファイルを「SharePointで開く」から開き、" & vbCrLf & _
-        "ファイルのURLを貼り付けてください。" & vbCrLf & vbCrLf & _
+        "SharePoint側のファイルURLを貼り付けてください。" & vbCrLf & vbCrLf & _
         "※ teams.microsoft.com の画面URLではなく、" & vbCrLf & _
         "   tenant.sharepoint.com 形式のURLを推奨します。", _
         "Teams JSON URL設定", _
@@ -63,21 +62,12 @@ Public Sub TeamsJSON_URLを設定()
         Exit Sub
     End If
 
-    If InStr(1, inputUrl, "teams.microsoft.com", vbTextCompare) > 0 Then
-        MsgBox _
-            "Teamsアプリの画面URLが入力されています。" & vbCrLf & vbCrLf & _
-            "対象ファイルを「SharePointで開く」で表示し、" & vbCrLf & _
-            "SharePoint側のファイルURLを設定してください。", _
-            vbExclamation, _
-            "Teams JSON URL設定"
-        Exit Sub
-    End If
+    If Not TeamsJsonValidateSourceUrl(inputUrl) Then Exit Sub
 
     TeamsJsonSaveSourceUrl inputUrl
 
     MsgBox _
-        "JSONの参照URLを保存しました。" & vbCrLf & vbCrLf & _
-        TeamsJsonSourceUrl(), _
+        "JSONの参照URLを保存しました。", _
         vbInformation, _
         "Teams JSON URL設定"
 End Sub
@@ -113,15 +103,7 @@ Public Sub TeamsJSON_URLを選択セルから設定()
         Exit Sub
     End If
 
-    If InStr(1, inputUrl, "teams.microsoft.com", vbTextCompare) > 0 Then
-        MsgBox _
-            "Teamsアプリの画面URLが入力されています。" & vbCrLf & vbCrLf & _
-            "対象ファイルを「SharePointで開く」で表示し、" & vbCrLf & _
-            "SharePoint側のファイルURLをセルへ貼り付けてください。", _
-            vbExclamation, _
-            "Teams JSON URL設定"
-        Exit Sub
-    End If
+    If Not TeamsJsonValidateSourceUrl(inputUrl) Then Exit Sub
 
     TeamsJsonSaveSourceUrl inputUrl
 
@@ -155,8 +137,16 @@ Public Sub TeamsJSON_URL設定をクリア()
         "Teams JSON URL設定"
 End Sub
 
+Public Sub メンションテンプレ_TeamsJSON版を初期設定()
+    If Not TeamsJsonEnsureUserForm() Then Exit Sub
+    TeamsJSON_URLを設定
+End Sub
+
 Public Sub メンションテンプレ_TeamsJSON版を開く()
     Dim sourceUrl As String
+
+    ' JSON版UserFormがまだ存在しない場合は自動作成する。
+    If Not TeamsJsonEnsureUserForm() Then Exit Sub
 
     sourceUrl = TeamsJsonSourceUrl()
 
@@ -181,7 +171,6 @@ End Sub
 
 Public Sub TeamsJSONを今すぐ同期()
     If TeamsJsonSync(True) Then
-        ' 既存モジュールのキャッシュも明示的に更新する。
         JsonTemplateLoadLatest False, True
     End If
 End Sub
@@ -191,6 +180,7 @@ Public Sub TeamsJSON_接続状況を確認()
     Dim normalizedUrl As String
     Dim targetPath As String
     Dim localState As String
+    Dim formState As String
     Dim resultText As String
 
     On Error GoTo DiagnosticError
@@ -205,8 +195,15 @@ Public Sub TeamsJSON_接続状況を確認()
         localState = "なし"
     End If
 
+    If TeamsJsonUserFormExists() Then
+        formState = "作成済み"
+    Else
+        formState = "未作成"
+    End If
+
     resultText = _
         "【Teams JSON接続状況】" & vbCrLf & vbCrLf & _
+        "UserForm: " & formState & vbCrLf & _
         "設定URL: " & IIf(Len(sourceUrl) > 0, sourceUrl, "未設定") & vbCrLf & _
         "取得URL: " & IIf(Len(normalizedUrl) > 0, normalizedUrl, "未設定") & vbCrLf & vbCrLf & _
         "ローカル保存先: " & targetPath & vbCrLf & _
@@ -224,6 +221,57 @@ DiagnosticError:
         vbExclamation, _
         "Teams JSON接続状況"
 End Sub
+
+' ============================================================
+' UserFormの自動作成
+' ============================================================
+Private Function TeamsJsonEnsureUserForm() As Boolean
+    On Error GoTo EnsureError
+
+    If TeamsJsonUserFormExists() Then
+        TeamsJsonEnsureUserForm = True
+        Exit Function
+    End If
+
+    ' 元モジュールの既存作成処理をそのまま利用する。
+    メンションテンプレ_JSON版を作成
+
+    If Not TeamsJsonUserFormExists() Then
+        Err.Raise vbObjectError + 2450, , _
+                  "UserFormを作成できませんでした。"
+    End If
+
+    TeamsJsonEnsureUserForm = True
+    Exit Function
+
+EnsureError:
+    TeamsJsonEnsureUserForm = False
+    MsgBox _
+        "テンプレート選択フォームを作成できませんでした。" & vbCrLf & vbCrLf & _
+        Err.Description & vbCrLf & vbCrLf & _
+        "Excelの「VBAプロジェクト オブジェクト モデルへのアクセスを信頼する」が" & vbCrLf & _
+        "ONになっているか確認してください。", _
+        vbExclamation, _
+        "UserForm作成"
+End Function
+
+Private Function TeamsJsonUserFormExists() As Boolean
+    Dim vbComp As Object
+
+    On Error GoTo CheckError
+
+    For Each vbComp In ThisWorkbook.VBProject.VBComponents
+        If StrComp(vbComp.Name, FORM_NAME, vbTextCompare) = 0 Then
+            TeamsJsonUserFormExists = True
+            Exit Function
+        End If
+    Next vbComp
+
+    Exit Function
+
+CheckError:
+    TeamsJsonUserFormExists = False
+End Function
 
 ' ============================================================
 ' URL設定
@@ -275,6 +323,31 @@ SaveError:
               Err.Description
 End Sub
 
+Private Function TeamsJsonValidateSourceUrl(ByVal sourceUrl As String) As Boolean
+    sourceUrl = Trim$(sourceUrl)
+
+    If InStr(1, sourceUrl, "teams.microsoft.com", vbTextCompare) > 0 Then
+        MsgBox _
+            "Teamsアプリの画面URLが入力されています。" & vbCrLf & vbCrLf & _
+            "対象JSONを「SharePointで開く」で表示し、" & vbCrLf & _
+            "SharePoint側のファイルURLを設定してください。", _
+            vbExclamation, _
+            "Teams JSON URL設定"
+        Exit Function
+    End If
+
+    If InStr(1, sourceUrl, "http://", vbTextCompare) <> 1 _
+       And InStr(1, sourceUrl, "https://", vbTextCompare) <> 1 Then
+        MsgBox _
+            "URLの形式が正しくありません。", _
+            vbExclamation, _
+            "Teams JSON URL設定"
+        Exit Function
+    End If
+
+    TeamsJsonValidateSourceUrl = True
+End Function
+
 ' ============================================================
 ' 同期本体
 ' ============================================================
@@ -300,12 +373,6 @@ Public Function TeamsJsonSync( _
                   "Teams JSON URLが未設定です。"
     End If
 
-    If InStr(1, sourceUrl, "teams.microsoft.com", vbTextCompare) > 0 Then
-        Err.Raise vbObjectError + 2402, , _
-                  "Teamsアプリの画面URLは直接取得できません。" & vbCrLf & _
-                  "対象ファイルを「SharePointで開く」で表示し、SharePointのURLを設定してください。"
-    End If
-
     requestUrl = TeamsJsonNormalizeDownloadUrl(sourceUrl)
     mTeamsJsonLastUrl = requestUrl
 
@@ -320,8 +387,6 @@ Public Function TeamsJsonSync( _
     TeamsJsonDeleteIfExists tempPath
     TeamsJsonWriteUtf8Text tempPath, jsonText
 
-    ' 完全にダウンロードできてから置換するため、
-    ' 通信失敗で既存のテンプレート.jsonを壊しません。
     TeamsJsonReplaceFileSafely tempPath, targetPath
 
     TeamsJsonSync = True
@@ -358,8 +423,8 @@ Private Function TeamsJsonDownloadUtf8(ByVal requestUrl As String) As String
     Dim httpObject As Object
     Dim responseBody As Variant
     Dim firstError As String
+    Dim secondError As String
 
-    ' 1回目: MSXML2.XMLHTTP
     On Error GoTo XmlHttpError
 
     Set httpObject = CreateObject("MSXML2.XMLHTTP.6.0")
@@ -386,7 +451,6 @@ XmlHttpError:
     Err.Clear
     Set httpObject = Nothing
 
-    ' 2回目: WinHTTP。社内環境でWindows統合認証が使える場合のフォールバック。
     On Error GoTo WinHttpError
 
     Set httpObject = CreateObject("WinHttp.WinHttpRequest.5.1")
@@ -411,6 +475,8 @@ XmlHttpError:
     Exit Function
 
 WinHttpError:
+    secondError = Err.Description
+
     If mTeamsJsonLastStatus = 401 Or mTeamsJsonLastStatus = 403 Then
         Err.Raise vbObjectError + 2412, , _
                   "SharePoint側でMicrosoft 365認証が必要です（HTTP " & _
@@ -420,7 +486,7 @@ WinHttpError:
     Err.Raise vbObjectError + 2413, , _
               "URLからJSONを取得できませんでした。" & vbCrLf & _
               "XMLHTTP: " & firstError & vbCrLf & _
-              "WinHTTP: " & Err.Description
+              "WinHTTP: " & secondError
 End Function
 
 Private Function TeamsJsonBytesToUtf8(ByVal responseBody As Variant) As String
@@ -455,7 +521,6 @@ Private Function TeamsJsonNormalizeDownloadUrl(ByVal sourceUrl As String) As Str
     normalizedUrl = Trim$(sourceUrl)
     normalizedUrl = Replace(normalizedUrl, "&amp;", "&", 1, -1, vbTextCompare)
 
-    ' SharePointの「Webで開く」指定が付いている場合はダウンロード指定へ置換。
     normalizedUrl = Replace(normalizedUrl, "?web=1", "?download=1", 1, -1, vbTextCompare)
     normalizedUrl = Replace(normalizedUrl, "&web=1", "&download=1", 1, -1, vbTextCompare)
 
@@ -532,7 +597,6 @@ Private Sub TeamsJsonReplaceFileSafely(ByVal tempPath As String, ByVal targetPat
     Exit Sub
 
 ReplaceError:
-    ' 置換に失敗した場合、可能ならバックアップを復元する。
     On Error Resume Next
     If Not TeamsJsonFileExists(targetPath) And TeamsJsonFileExists(backupPath) Then
         FileCopy backupPath, targetPath
