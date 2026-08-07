@@ -6,16 +6,15 @@ Option Explicit
 '
 ' 【前提】
 '   同じExcelブックに「メンションテンプレ_JSON自動読込.bas」を
-'   インポートして使用します。
+'   先にインポートして使用してください。
 '
-' 【ポイント】
-'   元マクロは
-'   'ブック名'!modTemplateFormBuilderJson.マクロ名
-'   の形でモジュール名まで明示して呼び出します。
+' 【重要】
+'   Application.Run は使用しません。
+'   元モジュール modTemplateFormBuilderJson の Public Sub / Function を
+'   直接呼び出します。
 ' ============================================================
 
 Private Const FORM_NAME As String = "frmTemplateSelectorJson"
-Private Const ORIGINAL_MODULE_NAME As String = "modTemplateFormBuilderJson"
 Private Const CONFIG_NAME As String = "MentionTemplateJsonSourceUrl"
 Private Const HTTP_TIMEOUT_MS As Long = 15000
 
@@ -23,23 +22,16 @@ Private mLastError As String
 Private mLastStatus As Long
 Private mLastTargetPath As String
 
+' ============================================================
+' 公開マクロ
+' ============================================================
 Public Sub メンションテンプレ_TeamsJSON版を初期設定()
-    If Not TeamsJsonOriginalModuleExists() Then
-        TeamsJsonShowOriginalModuleRequired
-        Exit Sub
-    End If
-
     If Not TeamsJsonEnsureUserForm() Then Exit Sub
     TeamsJSON_URLを設定
 End Sub
 
 Public Sub メンションテンプレ_TeamsJSON版を開く()
     Dim sourceUrl As String
-
-    If Not TeamsJsonOriginalModuleExists() Then
-        TeamsJsonShowOriginalModuleRequired
-        Exit Sub
-    End If
 
     If Not TeamsJsonEnsureUserForm() Then Exit Sub
 
@@ -57,7 +49,7 @@ Public Sub メンションテンプレ_TeamsJSON版を開く()
     End If
 
     On Error GoTo OpenError
-    Application.Run TeamsJsonOriginalMacroName("メンションテンプレ_JSON版を開く")
+    modTemplateFormBuilderJson.メンションテンプレ_JSON版を開く
     Exit Sub
 
 OpenError:
@@ -116,6 +108,7 @@ Public Sub TeamsJSON_URLを選択セルから設定()
     End If
 
     inputUrl = Trim$(CStr(Selection.Value2))
+
     If Len(inputUrl) = 0 Then
         MsgBox "選択セルにURLが入力されていません。", vbExclamation
         Exit Sub
@@ -140,29 +133,21 @@ Public Sub TeamsJSON_URL設定をクリア()
     ThisWorkbook.Names(CONFIG_NAME).Delete
     On Error GoTo 0
 
+    mLastError = vbNullString
+    mLastStatus = 0
+    mLastTargetPath = vbNullString
+
     MsgBox "Teams JSON URL設定をクリアしました。", vbInformation, "Teams JSON URL設定"
 End Sub
 
 Public Sub TeamsJSONを今すぐ同期()
-    If Not TeamsJsonOriginalModuleExists() Then
-        TeamsJsonShowOriginalModuleRequired
-        Exit Sub
-    End If
-
     Call TeamsJsonSync(True)
 End Sub
 
 Public Sub TeamsJSON_接続状況を確認()
-    Dim moduleState As String
     Dim formState As String
     Dim sourceUrl As String
     Dim statusText As String
-
-    If TeamsJsonOriginalModuleExists() Then
-        moduleState = "取込済み"
-    Else
-        moduleState = "未取込"
-    End If
 
     If TeamsJsonUserFormExists() Then
         formState = "作成済み"
@@ -180,9 +165,8 @@ Public Sub TeamsJSON_接続状況を確認()
 
     MsgBox _
         "【Teams JSON接続状況】" & vbCrLf & vbCrLf & _
-        "元JSONモジュール: " & moduleState & vbCrLf & _
         "UserForm: " & formState & vbCrLf & _
-        "設定URL: " & IIf(Len(sourceUrl) > 0, sourceUrl, "未設定") & vbCrLf & _
+        "設定URL: " & IIf(Len(sourceUrl) > 0, sourceUrl, "未設定") & vbCrLf & vbCrLf & _
         "直近HTTP状態: " & statusText & vbCrLf & _
         "直近保存先: " & IIf(Len(mLastTargetPath) > 0, mLastTargetPath, "未実行") & vbCrLf & _
         "直近エラー: " & IIf(Len(mLastError) > 0, mLastError, "なし"), _
@@ -190,22 +174,36 @@ Public Sub TeamsJSON_接続状況を確認()
         "Teams JSON接続状況"
 End Sub
 
-Private Function TeamsJsonOriginalModuleExists() As Boolean
-    Dim vbComp As Object
+' ============================================================
+' UserForm
+' ============================================================
+Private Function TeamsJsonEnsureUserForm() As Boolean
+    On Error GoTo EnsureError
 
-    On Error GoTo CheckError
+    If TeamsJsonUserFormExists() Then
+        TeamsJsonEnsureUserForm = True
+        Exit Function
+    End If
 
-    For Each vbComp In ThisWorkbook.VBProject.VBComponents
-        If StrComp(CStr(vbComp.Name), ORIGINAL_MODULE_NAME, vbTextCompare) = 0 Then
-            TeamsJsonOriginalModuleExists = True
-            Exit Function
-        End If
-    Next vbComp
+    ' 元モジュールの作成処理を直接呼び出す。
+    modTemplateFormBuilderJson.メンションテンプレ_JSON版を作成
 
+    If Not TeamsJsonUserFormExists() Then
+        Err.Raise vbObjectError + 2450, , "UserFormを作成できませんでした。"
+    End If
+
+    TeamsJsonEnsureUserForm = True
     Exit Function
 
-CheckError:
-    TeamsJsonOriginalModuleExists = False
+EnsureError:
+    TeamsJsonEnsureUserForm = False
+    MsgBox _
+        "テンプレート選択フォームを作成できませんでした。" & vbCrLf & vbCrLf & _
+        Err.Description & vbCrLf & vbCrLf & _
+        "まず Alt+F8 から「メンションテンプレ_JSON版を作成」を" & vbCrLf & _
+        "直接実行できるか確認してください。", _
+        vbExclamation, _
+        "UserForm作成"
 End Function
 
 Private Function TeamsJsonUserFormExists() As Boolean
@@ -226,49 +224,9 @@ CheckError:
     TeamsJsonUserFormExists = False
 End Function
 
-Private Function TeamsJsonEnsureUserForm() As Boolean
-    On Error GoTo EnsureError
-
-    If TeamsJsonUserFormExists() Then
-        TeamsJsonEnsureUserForm = True
-        Exit Function
-    End If
-
-    Application.Run TeamsJsonOriginalMacroName("メンションテンプレ_JSON版を作成")
-
-    If Not TeamsJsonUserFormExists() Then
-        Err.Raise vbObjectError + 2450, , "UserFormを作成できませんでした。"
-    End If
-
-    TeamsJsonEnsureUserForm = True
-    Exit Function
-
-EnsureError:
-    TeamsJsonEnsureUserForm = False
-    MsgBox _
-        "テンプレート選択フォームを作成できませんでした。" & vbCrLf & vbCrLf & _
-        Err.Description & vbCrLf & vbCrLf & _
-        "元マクロを手動実行できるか確認してください：" & vbCrLf & _
-        "メンションテンプレ_JSON版を作成", _
-        vbExclamation, _
-        "UserForm作成"
-End Function
-
-Private Function TeamsJsonOriginalMacroName(ByVal procedureName As String) As String
-    TeamsJsonOriginalMacroName = _
-        "'" & Replace(ThisWorkbook.Name, "'", "''") & "'!" & _
-        ORIGINAL_MODULE_NAME & "." & procedureName
-End Function
-
-Private Sub TeamsJsonShowOriginalModuleRequired()
-    MsgBox _
-        "元のJSONモジュールが同じExcelブックに見つかりません。" & vbCrLf & vbCrLf & _
-        "「メンションテンプレ_JSON自動読込.bas」を" & vbCrLf & _
-        "同じVBAプロジェクトへインポートしてください。", _
-        vbExclamation, _
-        "元JSONモジュールが必要です"
-End Sub
-
+' ============================================================
+' URL設定
+' ============================================================
 Public Function TeamsJsonSourceUrl() As String
     Dim nameObject As Name
     Dim refersText As String
@@ -285,7 +243,7 @@ Public Function TeamsJsonSourceUrl() As String
     If Len(refersText) >= 2 Then
         If Left$(refersText, 1) = """" And Right$(refersText, 1) = """" Then
             refersText = Mid$(refersText, 2, Len(refersText) - 2)
-            refersText = Replace(refersText, """""", """)
+            refersText = Replace(refersText, """""", """")
         End If
     End If
 
@@ -334,13 +292,15 @@ Private Function TeamsJsonValidateSourceUrl(ByVal sourceUrl As String) As Boolea
     TeamsJsonValidateSourceUrl = True
 End Function
 
+' ============================================================
+' 同期
+' ============================================================
 Public Function TeamsJsonSync(Optional ByVal showResult As Boolean = False) As Boolean
     Dim sourceUrl As String
     Dim requestUrl As String
     Dim targetPath As String
     Dim tempPath As String
     Dim jsonText As String
-    Dim dummy As Variant
 
     On Error GoTo SyncError
 
@@ -349,6 +309,7 @@ Public Function TeamsJsonSync(Optional ByVal showResult As Boolean = False) As B
     mLastTargetPath = vbNullString
 
     sourceUrl = TeamsJsonSourceUrl()
+
     If Len(sourceUrl) = 0 Then
         Err.Raise vbObjectError + 2401, , "Teams JSON URLが未設定です。"
     End If
@@ -357,7 +318,8 @@ Public Function TeamsJsonSync(Optional ByVal showResult As Boolean = False) As B
     jsonText = TeamsJsonDownloadUtf8(requestUrl)
     TeamsJsonValidateDownloadedText jsonText
 
-    targetPath = CStr(Application.Run(TeamsJsonOriginalMacroName("JsonTemplateFilePath")))
+    targetPath = modTemplateFormBuilderJson.JsonTemplateFilePath()
+
     If Len(Trim$(targetPath)) = 0 Then
         Err.Raise vbObjectError + 2402, , "JSONの保存先を取得できませんでした。"
     End If
@@ -369,7 +331,7 @@ Public Function TeamsJsonSync(Optional ByVal showResult As Boolean = False) As B
     TeamsJsonWriteUtf8Text tempPath, jsonText
     TeamsJsonReplaceFileSafely tempPath, targetPath
 
-    dummy = Application.Run(TeamsJsonOriginalMacroName("JsonTemplateLoadLatest"), False, True)
+    Call modTemplateFormBuilderJson.JsonTemplateLoadLatest(False, True)
 
     TeamsJsonSync = True
 
@@ -391,12 +353,16 @@ SyncError:
     If showResult Then
         MsgBox _
             "Teams / SharePointからJSONを同期できませんでした。" & vbCrLf & vbCrLf & _
-            mLastError, _
+            mLastError & vbCrLf & vbCrLf & _
+            TeamsJsonAuthenticationAdvice(), _
             vbExclamation, _
             "Teams JSON同期"
     End If
 End Function
 
+' ============================================================
+' HTTP取得
+' ============================================================
 Private Function TeamsJsonDownloadUtf8(ByVal requestUrl As String) As String
     Dim httpObject As Object
     Dim responseBody As Variant
@@ -405,6 +371,7 @@ Private Function TeamsJsonDownloadUtf8(ByVal requestUrl As String) As String
     On Error GoTo XmlHttpError
 
     Set httpObject = CreateObject("MSXML2.XMLHTTP.6.0")
+
     With httpObject
         .Open "GET", requestUrl, False
         .setRequestHeader "Accept", "application/json,text/plain,*/*"
@@ -412,6 +379,7 @@ Private Function TeamsJsonDownloadUtf8(ByVal requestUrl As String) As String
         .send
 
         mLastStatus = CLng(.Status)
+
         If mLastStatus < 200 Or mLastStatus >= 300 Then
             Err.Raise vbObjectError + 2410, , _
                       "HTTP " & CStr(mLastStatus) & " が返されました。"
@@ -431,6 +399,7 @@ XmlHttpError:
     On Error GoTo WinHttpError
 
     Set httpObject = CreateObject("WinHttp.WinHttpRequest.5.1")
+
     With httpObject
         .Open "GET", requestUrl, False
         .SetTimeouts HTTP_TIMEOUT_MS, HTTP_TIMEOUT_MS, HTTP_TIMEOUT_MS, HTTP_TIMEOUT_MS
@@ -440,6 +409,7 @@ XmlHttpError:
         .Send
 
         mLastStatus = CLng(.Status)
+
         If mLastStatus < 200 Or mLastStatus >= 300 Then
             Err.Raise vbObjectError + 2411, , _
                       "HTTP " & CStr(mLastStatus) & " が返されました。"
@@ -452,6 +422,12 @@ XmlHttpError:
     Exit Function
 
 WinHttpError:
+    If mLastStatus = 401 Or mLastStatus = 403 Then
+        Err.Raise vbObjectError + 2412, , _
+                  "SharePoint側でMicrosoft 365認証が必要です（HTTP " & _
+                  CStr(mLastStatus) & "）。"
+    End If
+
     Err.Raise vbObjectError + 2413, , _
               "URLからJSONを取得できませんでした。" & vbCrLf & _
               "XMLHTTP: " & firstError & vbCrLf & _
@@ -527,6 +503,9 @@ Private Sub TeamsJsonValidateDownloadedText(ByVal jsonText As String)
     End If
 End Sub
 
+' ============================================================
+' ファイル保存
+' ============================================================
 Private Sub TeamsJsonWriteUtf8Text(ByVal filePath As String, ByVal sourceText As String)
     Dim streamObject As Object
 
@@ -559,9 +538,11 @@ Private Sub TeamsJsonReplaceFileSafely(ByVal tempPath As String, ByVal targetPat
 
 ReplaceError:
     On Error Resume Next
+
     If Not TeamsJsonFileExists(targetPath) And TeamsJsonFileExists(backupPath) Then
         FileCopy backupPath, targetPath
     End If
+
     On Error GoTo 0
 
     Err.Raise vbObjectError + 2430, , _
@@ -584,3 +565,16 @@ Private Sub TeamsJsonDeleteIfExists(ByVal filePath As String)
     If TeamsJsonFileExists(filePath) Then Kill filePath
     On Error GoTo 0
 End Sub
+
+Private Function TeamsJsonAuthenticationAdvice() As String
+    If mLastStatus = 401 Or mLastStatus = 403 _
+       Or InStr(1, mLastError, "サインイン", vbTextCompare) > 0 _
+       Or InStr(1, mLastError, "認証", vbTextCompare) > 0 Then
+        TeamsJsonAuthenticationAdvice = _
+            "Microsoft 365認証が必要なリンクでは、VBA単体のURL取得が失敗する場合があります。" & vbCrLf & _
+            "その場合はTeamsのチャネルフォルダーをOneDriveで同期し、従来のローカル読込方式を使用してください。"
+    Else
+        TeamsJsonAuthenticationAdvice = _
+            "URL、ネットワーク接続、SharePoint側のアクセス権を確認してください。"
+    End If
+End Function
