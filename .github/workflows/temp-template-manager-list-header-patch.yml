@@ -27,7 +27,19 @@ jobs:
           from pathlib import Path
 
           path = Path("テンプレ管理用.bas")
-          text = path.read_bytes().decode("utf-8-sig")
+          raw = path.read_bytes()
+
+          if raw.startswith(b"\xef\xbb\xbf"):
+              source_encoding = "utf-8-sig"
+              text = raw.decode(source_encoding)
+          else:
+              try:
+                  text = raw.decode("utf-8")
+                  source_encoding = "utf-8"
+              except UnicodeDecodeError:
+                  text = raw.decode("cp932")
+                  source_encoding = "cp932"
+
           nl = "\r\n" if "\r\n" in text else "\n"
 
           def normalize(block: str) -> str:
@@ -247,7 +259,7 @@ jobs:
               if value not in text:
                   raise SystemExit(f"required output missing: {value}")
 
-          path.write_bytes(text.encode("utf-8"))
+          path.write_bytes(text.encode(source_encoding))
           PY
 
       - name: Commit patch and remove temporary workflow
