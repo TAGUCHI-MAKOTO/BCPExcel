@@ -1,5 +1,6 @@
 name: Patch JSON folder path support
 
+# Temporary workflow: the follow-up push triggers this workflow after creation.
 on:
   push:
     branches:
