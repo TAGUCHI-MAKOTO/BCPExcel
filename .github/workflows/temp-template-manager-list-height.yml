@@ -1,0 +1,59 @@
+name: Adjust template manager list height
+
+on:
+  push:
+    branches:
+      - agent/template-manager-list-height
+    paths:
+      - ".github/workflows/temp-template-manager-list-height.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/template-manager-list-height
+
+      - name: Extend result list
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("テンプレ管理用.bas")
+          raw = path.read_bytes()
+
+          if raw.startswith(b"\xef\xbb\xbf"):
+              encoding = "utf-8-sig"
+          else:
+              try:
+                  raw.decode("utf-8")
+                  encoding = "utf-8"
+              except UnicodeDecodeError:
+                  encoding = "cp932"
+
+          text = raw.decode(encoding)
+          old = '    AddListBox designer, "lstResults", 415, 113, 365, 285'
+          new = '    AddListBox designer, "lstResults", 415, 113, 365, 329'
+
+          count = text.count(old)
+          if count != 1:
+              raise SystemExit(f"expected one list layout match, found {count}")
+
+          text = text.replace(old, new, 1)
+          path.write_bytes(text.encode(encoding))
+          PY
+
+      - name: Commit adjustment and clean workflow
+        shell: bash
+        run: |
+          rm -f .github/workflows/temp-template-manager-list-height.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "テンプレ管理用.bas" .github/workflows/temp-template-manager-list-height.yml
+          git commit -m "テンプレ管理リストの高さをボタン下端に揃える"
+          git push origin HEAD:agent/template-manager-list-height
