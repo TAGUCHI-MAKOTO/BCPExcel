@@ -96,29 +96,29 @@ Private Sub CreateTemplateManagerForm(ByVal formScale As Double)
 
     currentStep = "件名欄の配置"
     AddLabel designer, "lblColumnB", "件名", 18, 18, 300, 18
-    AddTextBox designer, "txtColumnB", 18, 37, 465, 24, False
+    AddTextBox designer, "txtColumnB", 18, 37, 370, 24, False
 
     currentStep = "本文欄の配置"
     AddLabel designer, "lblColumnC", "本文", 18, 75, 300, 18
-    AddTextBox designer, "txtColumnC", 18, 94, 465, 238, True
+    AddTextBox designer, "txtColumnC", 18, 94, 370, 238, True
 
     currentStep = "タグ欄の配置"
     AddLabel designer, "lblColumnD", "タグ", 18, 347, 300, 18
-    AddTextBox designer, "txtColumnD", 18, 366, 465, 24, False
+    AddTextBox designer, "txtColumnD", 18, 366, 370, 24, False
 
     currentStep = "検索欄の配置"
-    AddLabel designer, "lblSearch", "キーワード検索", 510, 18, 270, 18
-    AddTextBox designer, "txtSearch", 510, 37, 270, 24, False
+    AddLabel designer, "lblSearch", "キーワード検索", 415, 18, 365, 18
+    AddTextBox designer, "txtSearch", 415, 37, 365, 24, False
 
     currentStep = "検索結果リストの配置"
-    AddLabel designer, "lblResults", "検索結果", 510, 75, 270, 18
-    AddHeaderBar designer, 510, 94, 270, 20
-    AddHeaderText designer, "lblHeadID", "ID", 516, 96, 34, 16
-    AddHeaderText designer, "lblHeadSubject", "件名", 562, 96, 130, 16
-    AddHeaderText designer, "lblHeadTag", "タグ", 704, 96, 70, 16
-    AddHeaderDivider designer, "lblHeadSep1", 556, 94, 20
-    AddHeaderDivider designer, "lblHeadSep2", 698, 94, 20
-    AddListBox designer, "lstResults", 510, 113, 270, 285
+    AddLabel designer, "lblResults", "検索結果", 415, 75, 365, 18
+    AddHeaderBar designer, 415, 94, 365, 20
+    AddHeaderText designer, "lblHeadID", "ID", 421, 96, 34, 16
+    AddHeaderText designer, "lblHeadSubject", "件名", 467, 96, 200, 16
+    AddHeaderText designer, "lblHeadTag", "タグ", 679, 96, 95, 16
+    AddHeaderDivider designer, "lblHeadSep1", 461, 94, 20
+    AddHeaderDivider designer, "lblHeadSep2", 673, 94, 20
+    AddListBox designer, "lstResults", 415, 113, 365, 285
 
     currentStep = "ボタンの配置"
     AddButton designer, "btnRegister", "登録", 18, 410, 85, 32, RGB(37, 99, 235)
@@ -629,8 +629,8 @@ Private Sub AddListBox( _
         .ColumnCount = 3
         .ColumnWidths = _
             CStr(45 * mFormScale) & " pt;" & _
-            CStr(140 * mFormScale) & " pt;" & _
-            CStr(64 * mFormScale) & " pt"
+            CStr(210 * mFormScale) & " pt;" & _
+            CStr(89 * mFormScale) & " pt"
         .IntegralHeight = False
     End With
 
