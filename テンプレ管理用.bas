@@ -118,7 +118,7 @@ Private Sub CreateTemplateManagerForm(ByVal formScale As Double)
     AddHeaderText designer, "lblHeadTag", "タグ", 679, 96, 95, 16
     AddHeaderDivider designer, "lblHeadSep1", 461, 94, 20
     AddHeaderDivider designer, "lblHeadSep2", 673, 94, 20
-    AddListBox designer, "lstResults", 415, 113, 365, 329
+    AddListBox designer, "lstResults", 415, 113, 365, 357
 
     currentStep = "ボタンの配置"
     AddButton designer, "btnRegister", "登録", 18, 410, 85, 32, RGB(37, 99, 235)
