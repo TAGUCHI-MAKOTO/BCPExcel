@@ -1,6 +1,5 @@
 name: Patch JSON folder path support
 
-# Trigger patch on this PR only.
 on:
   pull_request:
     types:
@@ -28,7 +27,19 @@ jobs:
           from pathlib import Path
 
           path = Path("メンションテンプレ_JSON自動読込.bas")
-          text = path.read_bytes().decode("utf-8-sig")
+          raw = path.read_bytes()
+
+          if raw.startswith(bytes((0xEF, 0xBB, 0xBF))):
+              text = raw.decode("utf-8-sig")
+              encoding = "utf-8-sig"
+          else:
+              try:
+                  text = raw.decode("utf-8")
+                  encoding = "utf-8"
+              except UnicodeDecodeError:
+                  text = raw.decode("cp932")
+                  encoding = "cp932"
+
           nl = "\r\n" if "\r\n" in text else "\n"
 
           def replace_once(old: str, new: str, label: str) -> None:
@@ -128,7 +139,7 @@ jobs:
               "diagnostic output",
           )
 
-          path.write_bytes(text.encode("utf-8"))
+          path.write_bytes(text.encode(encoding))
           PY
 
       - name: Commit patch and remove temporary workflow
