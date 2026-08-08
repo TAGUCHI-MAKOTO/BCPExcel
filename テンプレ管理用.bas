@@ -112,14 +112,19 @@ Private Sub CreateTemplateManagerForm(ByVal formScale As Double)
 
     currentStep = "検索結果リストの配置"
     AddLabel designer, "lblResults", "検索結果", 510, 75, 270, 18
-    AddListBox designer, "lstResults", 510, 94, 270, 304
+    AddHeaderBar designer, 510, 94, 270, 20
+    AddHeaderText designer, "lblHeadID", "ID", 516, 96, 34, 16
+    AddHeaderText designer, "lblHeadSubject", "件名", 562, 96, 130, 16
+    AddHeaderText designer, "lblHeadTag", "タグ", 704, 96, 70, 16
+    AddHeaderDivider designer, "lblHeadSep1", 556, 94, 20
+    AddHeaderDivider designer, "lblHeadSep2", 698, 94, 20
+    AddListBox designer, "lstResults", 510, 113, 270, 285
 
     currentStep = "ボタンの配置"
     AddButton designer, "btnRegister", "登録", 18, 410, 85, 32, RGB(37, 99, 235)
     AddButton designer, "btnDelete", "削除", 113, 410, 85, 32, RGB(220, 38, 38)
     AddButton designer, "btnClear", "クリア", 208, 410, 85, 32, RGB(100, 116, 139)
     AddButton designer, "btnExport", "エクスポート", 303, 410, 85, 32, RGB(5, 150, 105)
-    AddButton designer, "btnCopyOriginal", "原本を反映", 398, 410, 85, 32, RGB(124, 58, 237)
 
     currentStep = "フォーム処理コードの登録"
     vbComponent.CodeModule.AddFromString GetFormCode()
@@ -255,250 +260,6 @@ ExportError:
         "エクスポートできませんでした。" & vbCrLf & vbCrLf & _
         "エラー内容：" & Err.Description, _
         vbExclamation
-
-End Sub
-
-
-'============================================================
-' フォームの「原本を反映」ボタンから呼び出す転記処理
-' このブックの原本シートを、選択したブックの原本シートへ上書きする
-' 両方のシートがVeryHiddenでも表示状態を変更せず処理できる
-'============================================================
-Public Sub 原本を選択ファイルへ反映する()
-
-    Const msoFileDialogFilePicker As Long = 3
-    Const msoAutomationSecurityForceDisable As Long = 3
-
-    Dim sourceSheet As Worksheet
-    Dim targetSheet As Worksheet
-    Dim targetWorkbook As Workbook
-    Dim openedWorkbook As Workbook
-    Dim fileDialog As Object
-    Dim selectedPath As String
-    Dim answer As VbMsgBoxResult
-    Dim previousScreenUpdating As Boolean
-    Dim previousEnableEvents As Boolean
-    Dim previousDisplayAlerts As Boolean
-    Dim previousAutomationSecurity As Long
-    Dim applicationStateSaved As Boolean
-    Dim automationSecurityChanged As Boolean
-    Dim targetOpenedByProcedure As Boolean
-    Dim errorNumber As Long
-    Dim errorDescription As String
-
-    On Error GoTo CopyError
-
-    Set sourceSheet = ThisWorkbook.Worksheets("原本")
-    Set fileDialog = Application.FileDialog(msoFileDialogFilePicker)
-
-    With fileDialog
-        .Title = "原本を反映するExcelファイルを選択してください"
-        .AllowMultiSelect = False
-        .Filters.Clear
-        .Filters.Add _
-            "Excelファイル", _
-            "*.xlsx;*.xlsm;*.xlsb;*.xls"
-
-        If Len(ThisWorkbook.Path) > 0 Then
-            .InitialFileName = _
-                ThisWorkbook.Path & Application.PathSeparator
-        End If
-
-        If .Show <> -1 Then Exit Sub
-        selectedPath = CStr(.SelectedItems(1))
-    End With
-
-    If StrComp( _
-        selectedPath, _
-        ThisWorkbook.FullName, _
-        vbTextCompare) = 0 Then
-
-        MsgBox _
-            "現在開いているファイル自身には反映できません。" & vbCrLf & _
-            "別のExcelファイルを選択してください。", _
-            vbExclamation, _
-            "ファイル選択"
-        Exit Sub
-    End If
-
-    Set openedWorkbook = TM_FindOpenWorkbook(selectedPath)
-
-    If Not openedWorkbook Is Nothing Then
-        MsgBox _
-            "選択したファイルは既に開かれています。" & vbCrLf & _
-            "ファイルを閉じてから、もう一度実行してください。", _
-            vbExclamation, _
-            "ファイル確認"
-        Exit Sub
-    End If
-
-    answer = MsgBox( _
-        "次のファイルの「原本」シートを全消去し、" & vbCrLf & _
-        "このファイルの「原本」に置き換えます。" & vbCrLf & vbCrLf & _
-        selectedPath & vbCrLf & vbCrLf & _
-        "処理を続けますか？", _
-        vbQuestion + vbYesNo + vbDefaultButton2, _
-        "原本の反映確認")
-
-    If answer <> vbYes Then Exit Sub
-
-    previousScreenUpdating = Application.ScreenUpdating
-    previousEnableEvents = Application.EnableEvents
-    previousDisplayAlerts = Application.DisplayAlerts
-    previousAutomationSecurity = Application.AutomationSecurity
-    applicationStateSaved = True
-
-    Application.ScreenUpdating = False
-    Application.EnableEvents = False
-    Application.AutomationSecurity = _
-        msoAutomationSecurityForceDisable
-    automationSecurityChanged = True
-
-    Set targetWorkbook = Workbooks.Open( _
-        Filename:=selectedPath, _
-        UpdateLinks:=0, _
-        ReadOnly:=False, _
-        IgnoreReadOnlyRecommended:=False)
-    targetOpenedByProcedure = True
-
-    Application.AutomationSecurity = previousAutomationSecurity
-    automationSecurityChanged = False
-
-    If targetWorkbook.ReadOnly Then
-        Err.Raise _
-            vbObjectError + 2101, _
-            "原本を選択ファイルへ反映する", _
-            "選択したファイルが読み取り専用で開かれました。" & _
-            vbCrLf & _
-            "編集用パスワードを入力して開ける状態で、" & _
-            "もう一度実行してください。"
-    End If
-
-    On Error Resume Next
-    Set targetSheet = targetWorkbook.Worksheets("原本")
-    On Error GoTo CopyError
-
-    If targetSheet Is Nothing Then
-        Err.Raise _
-            vbObjectError + 2102, _
-            "原本を選択ファイルへ反映する", _
-            "選択したファイルに「原本」シートがありません。"
-    End If
-
-    TM_ReplaceWorksheetContents sourceSheet, targetSheet
-
-    targetWorkbook.Save
-    targetWorkbook.Close SaveChanges:=False
-    targetOpenedByProcedure = False
-
-    Application.ScreenUpdating = previousScreenUpdating
-    Application.EnableEvents = previousEnableEvents
-    Application.DisplayAlerts = previousDisplayAlerts
-
-    MsgBox _
-        "選択したファイルへ原本を反映しました。" & vbCrLf & _
-        selectedPath, _
-        vbInformation, _
-        "反映完了"
-    Exit Sub
-
-CopyError:
-    errorNumber = Err.Number
-    errorDescription = Err.Description
-
-    On Error Resume Next
-
-    If automationSecurityChanged Then
-        Application.AutomationSecurity = previousAutomationSecurity
-    End If
-
-    Application.CutCopyMode = False
-
-    If targetOpenedByProcedure Then
-        Application.DisplayAlerts = False
-        targetWorkbook.Close SaveChanges:=False
-    End If
-
-    If applicationStateSaved Then
-        Application.ScreenUpdating = previousScreenUpdating
-        Application.EnableEvents = previousEnableEvents
-        Application.DisplayAlerts = previousDisplayAlerts
-    End If
-
-    On Error GoTo 0
-
-    MsgBox _
-        "原本を反映できませんでした。" & vbCrLf & vbCrLf & _
-        "エラー番号：" & CStr(errorNumber) & vbCrLf & _
-        "エラー内容：" & errorDescription, _
-        vbExclamation, _
-        "反映エラー"
-
-End Sub
-
-
-'============================================================
-' 指定したファイルが既に開かれているか確認
-'============================================================
-Private Function TM_FindOpenWorkbook( _
-    ByVal targetPath As String) As Workbook
-
-    Dim workbookItem As Workbook
-
-    For Each workbookItem In Application.Workbooks
-        If StrComp( _
-            workbookItem.FullName, _
-            targetPath, _
-            vbTextCompare) = 0 Then
-
-            Set TM_FindOpenWorkbook = workbookItem
-            Exit Function
-        End If
-    Next workbookItem
-
-End Function
-
-
-'============================================================
-' 転記先を全消去し、転記元の使用範囲をそのまま複製
-' セル内容・数式・書式・列幅・行高・非表示状態を引き継ぐ
-'============================================================
-Private Sub TM_ReplaceWorksheetContents( _
-    ByVal sourceSheet As Worksheet, _
-    ByVal targetSheet As Worksheet)
-
-    Dim sourceRange As Range
-    Dim targetRange As Range
-    Dim rowNumber As Long
-    Dim columnNumber As Long
-    Dim lastRow As Long
-    Dim lastColumn As Long
-
-    Set sourceRange = sourceSheet.UsedRange
-    Set targetRange = targetSheet.Range(sourceRange.Address)
-
-    targetSheet.Cells.Clear
-
-    sourceRange.Copy
-    targetRange.PasteSpecial Paste:=xlPasteAll
-    targetRange.PasteSpecial Paste:=xlPasteColumnWidths
-
-    lastRow = sourceRange.Row + sourceRange.Rows.Count - 1
-    lastColumn = sourceRange.Column + sourceRange.Columns.Count - 1
-
-    For rowNumber = sourceRange.Row To lastRow
-        targetSheet.Rows(rowNumber).RowHeight = _
-            sourceSheet.Rows(rowNumber).RowHeight
-        targetSheet.Rows(rowNumber).Hidden = _
-            sourceSheet.Rows(rowNumber).Hidden
-    Next rowNumber
-
-    For columnNumber = sourceRange.Column To lastColumn
-        targetSheet.Columns(columnNumber).Hidden = _
-            sourceSheet.Columns(columnNumber).Hidden
-    Next columnNumber
-
-    Application.CutCopyMode = False
 
 End Sub
 
@@ -715,6 +476,94 @@ End Sub
 
 
 '============================================================
+' リスト見出し背景追加
+'============================================================
+Private Sub AddHeaderBar( _
+    ByVal designer As Object, _
+    ByVal leftPos As Single, _
+    ByVal topPos As Single, _
+    ByVal controlWidth As Single, _
+    ByVal controlHeight As Single)
+
+    Dim ctl As Object
+
+    Set ctl = designer.Controls.Add("Forms.Label.1", "lblHeaderBar", True)
+
+    With ctl
+        .Caption = ""
+        .Left = leftPos * mFormScale
+        .Top = topPos * mFormScale
+        .Width = controlWidth * mFormScale
+        .Height = controlHeight * mFormScale
+        .BackStyle = 1
+        .BackColor = RGB(226, 232, 240)
+        .BorderStyle = 0
+    End With
+
+End Sub
+
+
+'============================================================
+' リスト見出し文字追加
+'============================================================
+Private Sub AddHeaderText( _
+    ByVal designer As Object, _
+    ByVal controlName As String, _
+    ByVal captionText As String, _
+    ByVal leftPos As Single, _
+    ByVal topPos As Single, _
+    ByVal controlWidth As Single, _
+    ByVal controlHeight As Single)
+
+    Dim ctl As Object
+
+    Set ctl = designer.Controls.Add("Forms.Label.1", controlName, True)
+
+    With ctl
+        .Caption = captionText
+        .Left = leftPos * mFormScale
+        .Top = topPos * mFormScale
+        .Width = controlWidth * mFormScale
+        .Height = controlHeight * mFormScale
+        .Font.Name = "Meiryo UI"
+        .Font.Size = 8 * mFormScale
+        .Font.Bold = True
+        .BackStyle = 0
+        .ForeColor = RGB(51, 65, 85)
+        .BorderStyle = 0
+    End With
+
+End Sub
+
+
+'============================================================
+' リスト見出し区切り線追加
+'============================================================
+Private Sub AddHeaderDivider( _
+    ByVal designer As Object, _
+    ByVal controlName As String, _
+    ByVal leftPos As Single, _
+    ByVal topPos As Single, _
+    ByVal controlHeight As Single)
+
+    Dim ctl As Object
+
+    Set ctl = designer.Controls.Add("Forms.Label.1", controlName, True)
+
+    With ctl
+        .Caption = ""
+        .Left = leftPos * mFormScale
+        .Top = (topPos + 3) * mFormScale
+        .Width = 1 * mFormScale
+        .Height = (controlHeight - 6) * mFormScale
+        .BackStyle = 1
+        .BackColor = RGB(148, 163, 184)
+        .BorderStyle = 0
+    End With
+
+End Sub
+
+'============================================================
 ' テキストボックス追加
 '============================================================
 Private Sub AddTextBox( _
@@ -777,8 +626,11 @@ Private Sub AddListBox( _
         .BackColor = RGB(255, 255, 255)
         .BorderStyle = 1
         .SpecialEffect = 0
-        .ColumnCount = 2
-        .ColumnWidths = "0 pt;" & CStr(250 * mFormScale) & " pt"
+        .ColumnCount = 3
+        .ColumnWidths = _
+            CStr(45 * mFormScale) & " pt;" & _
+            CStr(140 * mFormScale) & " pt;" & _
+            CStr(64 * mFormScale) & " pt"
         .IntegralHeight = False
     End With
 
@@ -845,8 +697,7 @@ Private Function GetFormCode() As String
     AddCodeLine code, "    SelectedID = 0"
     AddCodeLine code, "    With Me.lstResults"
     AddCodeLine code, "        .Clear"
-    AddCodeLine code, "        .ColumnCount = 2"
-    AddCodeLine code, "        .ColumnWidths = ""0 pt;"" & CStr(.Width - 20) & "" pt"""
+    AddCodeLine code, "        .ColumnCount = 3"
     AddCodeLine code, "    End With"
     AddCodeLine code, "    SetSearchPlaceholder"
     AddCodeLine code, "    ClearInputFields"
@@ -967,10 +818,6 @@ Private Function GetFormCode() As String
     AddCodeLine code, "    Application.Run ""'"" & ThisWorkbook.Name & ""'!ExportTemplatesJsonFromForm"""
     AddCodeLine code, "End Sub"
     AddCodeLine code, ""
-    AddCodeLine code, "Private Sub btnCopyOriginal_Click()"
-    AddCodeLine code, "    Application.Run ""'"" & ThisWorkbook.Name & ""'!原本を選択ファイルへ反映する"""
-    AddCodeLine code, "End Sub"
-    AddCodeLine code, ""
     AddCodeLine code, "Private Sub LoadList(ByVal keyword As String)"
     AddCodeLine code, "    Dim ws As Worksheet"
     AddCodeLine code, "    Dim lastRow As Long"
@@ -978,6 +825,7 @@ Private Function GetFormCode() As String
     AddCodeLine code, "    Dim searchText As String"
     AddCodeLine code, "    Dim displayText As String"
     AddCodeLine code, "    Dim bodyPreview As String"
+    AddCodeLine code, "    Dim tagText As String"
     AddCodeLine code, "    Set ws = ThisWorkbook.Worksheets(TARGET_SHEET)"
     AddCodeLine code, "    Me.lstResults.Clear"
     AddCodeLine code, "    lastRow = GetLastRow(ws)"
@@ -986,6 +834,7 @@ Private Function GetFormCode() As String
     AddCodeLine code, "        searchText = CStr(ws.Cells(rowNumber, ""C"").Value)"
     AddCodeLine code, "        If keyword = """" Or InStr(1, searchText, keyword, vbTextCompare) > 0 Then"
     AddCodeLine code, "            displayText = Trim$(CStr(ws.Cells(rowNumber, ""B"").Value))"
+    AddCodeLine code, "            tagText = Trim$(CStr(ws.Cells(rowNumber, ""D"").Value))"
     AddCodeLine code, "            If Len(displayText) = 0 Then"
     AddCodeLine code, "                bodyPreview = CStr(ws.Cells(rowNumber, ""C"").Value)"
     AddCodeLine code, "                bodyPreview = Replace(bodyPreview, vbCrLf, "" "")"
@@ -998,6 +847,7 @@ Private Function GetFormCode() As String
     AddCodeLine code, "            End If"
     AddCodeLine code, "            Me.lstResults.AddItem CStr(ws.Cells(rowNumber, ""A"").Value)"
     AddCodeLine code, "            Me.lstResults.List(Me.lstResults.ListCount - 1, 1) = displayText"
+    AddCodeLine code, "            Me.lstResults.List(Me.lstResults.ListCount - 1, 2) = tagText"
     AddCodeLine code, "        End If"
     AddCodeLine code, "    Next rowNumber"
     AddCodeLine code, "End Sub"
