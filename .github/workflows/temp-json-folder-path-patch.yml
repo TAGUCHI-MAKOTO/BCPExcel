@@ -1,5 +1,6 @@
 name: Patch JSON folder path support
 
+# Trigger patch on this PR only.
 on:
   pull_request:
     types:
