@@ -1,0 +1,262 @@
+name: Patch template manager list headers
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/temp-template-manager-list-header-patch.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Patch BAS
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("テンプレ管理用.bas")
+          text = path.read_bytes().decode("utf-8-sig")
+          nl = "\r\n" if "\r\n" in text else "\n"
+
+          def normalize(block: str) -> str:
+              return block.strip("\n").replace("\n", nl)
+
+          def replace_once(old: str, new: str, label: str) -> None:
+              global text
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{label}: expected 1 match, found {count}")
+              text = text.replace(old, new, 1)
+
+          old_layout = normalize('''
+              currentStep = "検索結果リストの配置"
+              AddLabel designer, "lblResults", "検索結果", 510, 75, 270, 18
+              AddListBox designer, "lstResults", 510, 94, 270, 304
+          ''')
+          new_layout = normalize('''
+              currentStep = "検索結果リストの配置"
+              AddLabel designer, "lblResults", "検索結果", 510, 75, 270, 18
+              AddHeaderBar designer, 510, 94, 270, 20
+              AddHeaderText designer, "lblHeadID", "ID", 516, 96, 34, 16
+              AddHeaderText designer, "lblHeadSubject", "件名", 562, 96, 130, 16
+              AddHeaderText designer, "lblHeadTag", "タグ", 704, 96, 70, 16
+              AddHeaderDivider designer, "lblHeadSep1", 556, 94, 20
+              AddHeaderDivider designer, "lblHeadSep2", 698, 94, 20
+              AddListBox designer, "lstResults", 510, 113, 270, 285
+          ''')
+          replace_once(old_layout, new_layout, "list layout")
+
+          replace_once(
+              '    AddButton designer, "btnCopyOriginal", "原本を反映", 398, 410, 85, 32, RGB(124, 58, 237)' + nl,
+              "",
+              "copy-original button",
+          )
+
+          copy_marker = (
+              "'============================================================" + nl +
+              "' フォームの「原本を反映」ボタンから呼び出す転記処理"
+          )
+          tags_marker = (
+              "'============================================================" + nl +
+              "' タグ文字列をJSON配列へ変換"
+          )
+          copy_start = text.find(copy_marker)
+          tags_start = text.find(tags_marker, copy_start + 1)
+          if copy_start < 0 or tags_start < 0 or tags_start <= copy_start:
+              raise SystemExit("copy-original procedure block: marker not found")
+          text = text[:copy_start] + text[tags_start:]
+
+          text_box_marker = (
+              "'============================================================" + nl +
+              "' テキストボックス追加"
+          )
+          if "Private Sub AddHeaderBar(" in text:
+              raise SystemExit("header helpers already exist")
+
+          header_helpers = normalize('''
+          '============================================================
+          ' リスト見出し背景追加
+          '============================================================
+          Private Sub AddHeaderBar( _
+              ByVal designer As Object, _
+              ByVal leftPos As Single, _
+              ByVal topPos As Single, _
+              ByVal controlWidth As Single, _
+              ByVal controlHeight As Single)
+
+              Dim ctl As Object
+
+              Set ctl = designer.Controls.Add("Forms.Label.1", "lblHeaderBar", True)
+
+              With ctl
+                  .Caption = ""
+                  .Left = leftPos * mFormScale
+                  .Top = topPos * mFormScale
+                  .Width = controlWidth * mFormScale
+                  .Height = controlHeight * mFormScale
+                  .BackStyle = 1
+                  .BackColor = RGB(226, 232, 240)
+                  .BorderStyle = 0
+              End With
+
+          End Sub
+
+
+          '============================================================
+          ' リスト見出し文字追加
+          '============================================================
+          Private Sub AddHeaderText( _
+              ByVal designer As Object, _
+              ByVal controlName As String, _
+              ByVal captionText As String, _
+              ByVal leftPos As Single, _
+              ByVal topPos As Single, _
+              ByVal controlWidth As Single, _
+              ByVal controlHeight As Single)
+
+              Dim ctl As Object
+
+              Set ctl = designer.Controls.Add("Forms.Label.1", controlName, True)
+
+              With ctl
+                  .Caption = captionText
+                  .Left = leftPos * mFormScale
+                  .Top = topPos * mFormScale
+                  .Width = controlWidth * mFormScale
+                  .Height = controlHeight * mFormScale
+                  .Font.Name = "Meiryo UI"
+                  .Font.Size = 8 * mFormScale
+                  .Font.Bold = True
+                  .BackStyle = 0
+                  .ForeColor = RGB(51, 65, 85)
+                  .BorderStyle = 0
+              End With
+
+          End Sub
+
+
+          '============================================================
+          ' リスト見出し区切り線追加
+          '============================================================
+          Private Sub AddHeaderDivider( _
+              ByVal designer As Object, _
+              ByVal controlName As String, _
+              ByVal leftPos As Single, _
+              ByVal topPos As Single, _
+              ByVal controlHeight As Single)
+
+              Dim ctl As Object
+
+              Set ctl = designer.Controls.Add("Forms.Label.1", controlName, True)
+
+              With ctl
+                  .Caption = ""
+                  .Left = leftPos * mFormScale
+                  .Top = (topPos + 3) * mFormScale
+                  .Width = 1 * mFormScale
+                  .Height = (controlHeight - 6) * mFormScale
+                  .BackStyle = 1
+                  .BackColor = RGB(148, 163, 184)
+                  .BorderStyle = 0
+              End With
+
+          End Sub
+
+
+          ''')
+          if text.count(text_box_marker) != 1:
+              raise SystemExit("text-box helper marker must appear once")
+          text = text.replace(text_box_marker, header_helpers + text_box_marker, 1)
+
+          column_count_matches = text.count(".ColumnCount = 2")
+          if column_count_matches != 2:
+              raise SystemExit(f"column count: expected 2 matches, found {column_count_matches}")
+          text = text.replace(".ColumnCount = 2", ".ColumnCount = 3")
+
+          replace_once(
+              '        .ColumnWidths = "0 pt;" & CStr(250 * mFormScale) & " pt"',
+              normalize('''
+                      .ColumnWidths = _
+                          CStr(45 * mFormScale) & " pt;" & _
+                          CStr(140 * mFormScale) & " pt;" & _
+                          CStr(64 * mFormScale) & " pt"
+              '''),
+              "list column widths",
+          )
+
+          replace_once(
+              '    AddCodeLine code, "        .ColumnWidths = ""0 pt;"" & CStr(.Width - 20) & "" pt"""' + nl,
+              "",
+              "generated list column widths",
+          )
+
+          event_start_marker = '    AddCodeLine code, "Private Sub btnCopyOriginal_Click()"' + nl
+          load_list_marker = '    AddCodeLine code, "Private Sub LoadList(ByVal keyword As String)"' + nl
+          event_start = text.find(event_start_marker)
+          load_start = text.find(load_list_marker, event_start + 1)
+          if event_start < 0 or load_start < 0 or load_start <= event_start:
+              raise SystemExit("generated copy-original event block: marker not found")
+          text = text[:event_start] + text[load_start:]
+
+          old = '    AddCodeLine code, "    Dim bodyPreview As String"' + nl
+          replace_once(
+              old,
+              old + '    AddCodeLine code, "    Dim tagText As String"' + nl,
+              "tag variable",
+          )
+
+          old = '    AddCodeLine code, "            displayText = Trim$(CStr(ws.Cells(rowNumber, ""B"").Value))"' + nl
+          replace_once(
+              old,
+              old + '    AddCodeLine code, "            tagText = Trim$(CStr(ws.Cells(rowNumber, ""D"").Value))"' + nl,
+              "tag assignment",
+          )
+
+          old = '    AddCodeLine code, "            Me.lstResults.List(Me.lstResults.ListCount - 1, 1) = displayText"' + nl
+          replace_once(
+              old,
+              old + '    AddCodeLine code, "            Me.lstResults.List(Me.lstResults.ListCount - 1, 2) = tagText"' + nl,
+              "tag list column",
+          )
+
+          forbidden = ["btnCopyOriginal", "原本を選択ファイルへ反映する"]
+          for value in forbidden:
+              if value in text:
+                  raise SystemExit(f"forbidden remnant: {value}")
+
+          required = [
+              'AddHeaderText designer, "lblHeadID", "ID"',
+              'AddHeaderText designer, "lblHeadSubject", "件名"',
+              'AddHeaderText designer, "lblHeadTag", "タグ"',
+              ".ColumnCount = 3",
+              "ListCount - 1, 2",
+          ]
+          for value in required:
+              if value not in text:
+                  raise SystemExit(f"required output missing: {value}")
+
+          path.write_bytes(text.encode("utf-8"))
+          PY
+
+      - name: Commit patch and remove temporary workflow
+        shell: bash
+        run: |
+          rm -f .github/workflows/temp-template-manager-list-header-patch.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "テンプレ管理用.bas" .github/workflows/temp-template-manager-list-header-patch.yml
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "テンプレ管理フォームの一覧見出しを追加"
+          git push origin HEAD:main
