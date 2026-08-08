@@ -5,7 +5,7 @@ Option Explicit
 ' テンプレート選択フォーム 自動作成マクロ（JSON自動読込版）
 '
 ' 【前提ファイル・シート】
-'   テンプレート.json  ブックと同じフォルダーに配置（URL表示時はローカルの同階層を自動検索）
+'   テンプレート.json  JSON_FOLDER_PATHで指定したフォルダーを優先（空欄時は従来どおり自動検索）
 '   休日マスタ         A列:休日の日付（見出しの有無は問いません）
 '   リスト             A列:Windowsユーザー名 / B列:表示名
 '
@@ -26,6 +26,11 @@ Private Const FORM_NAME As String = "frmTemplateSelectorJson"
 Private Const USER_LIST_SHEET As String = "リスト"
 Private Const USER_PLACEHOLDER As String = "$name$"
 Private Const JSON_FILE_NAME As String = "テンプレート.json"
+' JSON格納フォルダーを指定します。
+' 例: "C:\共有\メンションテンプレ"
+' %USERPROFILE% / %OneDrive% などの環境変数も使用できます。
+' 空欄の場合は従来どおりブックの場所から自動検索します。
+Private Const JSON_FOLDER_PATH As String = ""
 
 Private mCurrentDisplayName As String
 Private mUserNameInitialized As Boolean
@@ -353,6 +358,20 @@ Public Function JsonTemplateFilePath() As String
     Dim mappedPath As String
     Dim desktopPath As String
     Dim localBookFolder As String
+    Dim configuredFolder As String
+
+    '指定フォルダーが設定されている場合は、そこを最優先で使用します。
+    configuredFolder = JsonTemplateExpandEnvironmentVariables(Trim$(JSON_FOLDER_PATH))
+
+    If Len(configuredFolder) > 0 Then
+        If Not JsonTemplateFolderExists(configuredFolder) Then
+            Err.Raise vbObjectError + 2103, , _
+                      "JSON格納フォルダーが見つかりません。" & vbCrLf & configuredFolder
+        End If
+
+        JsonTemplateFilePath = JsonTemplateJoinPath(configuredFolder, JSON_FILE_NAME)
+        Exit Function
+    End If
 
     '一度正常に読み込めた参照先が残っていれば最優先で使用します。
     If mJsonTemplateLoaded Then
@@ -736,6 +755,22 @@ Private Function JsonTemplateUrlDecode(ByVal sourceText As String) As String
     JsonTemplateUrlDecode = decodedText
 End Function
 
+Private Function JsonTemplateExpandEnvironmentVariables( _
+    ByVal sourcePath As String) As String
+
+    Dim shellObject As Object
+
+    If Len(Trim$(sourcePath)) = 0 Then Exit Function
+
+    On Error GoTo ExpandError
+    Set shellObject = CreateObject("WScript.Shell")
+    JsonTemplateExpandEnvironmentVariables = _
+        Trim$(CStr(shellObject.ExpandEnvironmentStrings(sourcePath)))
+    Exit Function
+
+ExpandError:
+    JsonTemplateExpandEnvironmentVariables = sourcePath
+End Function
 Private Function JsonTemplateJoinPath( _
     ByVal folderPath As String, _
     ByVal fileName As String) As String
@@ -809,6 +844,7 @@ Public Sub JSONテンプレート読込状況を確認()
         "マクロ格納先: " & ThisWorkbook.Path & vbCrLf & vbCrLf & _
         "現在のブック: " & activeBookName & vbCrLf & _
         "現在の保存先: " & activeBookPath & vbCrLf & vbCrLf & _
+        "指定JSONフォルダー: " & IIf(Len(Trim$(JSON_FOLDER_PATH)) > 0, JSON_FOLDER_PATH, "未指定（自動検索）") & vbCrLf & _
         "JSON参照先: " & resolvedPath & vbCrLf & _
         "ファイル確認: " & existsText & vbCrLf & _
         "読込結果: " & loadText
