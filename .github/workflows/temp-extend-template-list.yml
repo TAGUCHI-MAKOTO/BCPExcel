@@ -1,0 +1,54 @@
+name: Extend template manager list
+
+on:
+  push:
+    branches:
+      - agent/template-manager-list-height
+    paths:
+      - ".github/workflows/temp-extend-template-list.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/template-manager-list-height
+
+      - name: Extend list height
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("テンプレ管理用.bas")
+          raw = path.read_bytes()
+          if raw.startswith(b"\xef\xbb\xbf"):
+              enc = "utf-8-sig"
+          else:
+              try:
+                  raw.decode("utf-8")
+                  enc = "utf-8"
+              except UnicodeDecodeError:
+                  enc = "cp932"
+          text = raw.decode(enc)
+          old = '    AddListBox designer, "lstResults", 415, 113, 365, 329'
+          new = '    AddListBox designer, "lstResults", 415, 113, 365, 357'
+          if text.count(old) != 1:
+              raise SystemExit(f"expected exactly one target line, found {text.count(old)}")
+          text = text.replace(old, new, 1)
+          path.write_bytes(text.encode(enc))
+          PY
+
+      - name: Commit and clean workflow
+        shell: bash
+        run: |
+          rm -f .github/workflows/temp-extend-template-list.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "テンプレ管理用.bas" .github/workflows/temp-extend-template-list.yml
+          git commit -m "テンプレ管理リストを下端ラインまで拡張"
+          git push origin HEAD:agent/template-manager-list-height
