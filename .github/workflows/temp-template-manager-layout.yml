@@ -1,0 +1,104 @@
+name: Patch template manager layout
+
+on:
+  push:
+    branches:
+      - agent/template-manager-layout
+    paths:
+      - ".github/workflows/temp-template-manager-layout.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/template-manager-layout
+
+      - name: Patch BAS layout
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("テンプレ管理用.bas")
+          raw = path.read_bytes()
+
+          if raw.startswith(b"\xef\xbb\xbf"):
+              encoding = "utf-8-sig"
+              text = raw.decode(encoding)
+          else:
+              try:
+                  text = raw.decode("utf-8")
+                  encoding = "utf-8"
+              except UnicodeDecodeError:
+                  text = raw.decode("cp932")
+                  encoding = "cp932"
+
+          replacements = {
+              'AddTextBox designer, "txtColumnB", 18, 37, 465, 24, False':
+                  'AddTextBox designer, "txtColumnB", 18, 37, 370, 24, False',
+              'AddTextBox designer, "txtColumnC", 18, 94, 465, 238, True':
+                  'AddTextBox designer, "txtColumnC", 18, 94, 370, 238, True',
+              'AddTextBox designer, "txtColumnD", 18, 366, 465, 24, False':
+                  'AddTextBox designer, "txtColumnD", 18, 366, 370, 24, False',
+              'AddLabel designer, "lblSearch", "キーワード検索", 510, 18, 270, 18':
+                  'AddLabel designer, "lblSearch", "キーワード検索", 415, 18, 365, 18',
+              'AddTextBox designer, "txtSearch", 510, 37, 270, 24, False':
+                  'AddTextBox designer, "txtSearch", 415, 37, 365, 24, False',
+              'AddLabel designer, "lblResults", "検索結果", 510, 75, 270, 18':
+                  'AddLabel designer, "lblResults", "検索結果", 415, 75, 365, 18',
+              'AddHeaderBar designer, 510, 94, 270, 20':
+                  'AddHeaderBar designer, 415, 94, 365, 20',
+              'AddHeaderText designer, "lblHeadID", "ID", 516, 96, 34, 16':
+                  'AddHeaderText designer, "lblHeadID", "ID", 421, 96, 34, 16',
+              'AddHeaderText designer, "lblHeadSubject", "件名", 562, 96, 130, 16':
+                  'AddHeaderText designer, "lblHeadSubject", "件名", 467, 96, 200, 16',
+              'AddHeaderText designer, "lblHeadTag", "タグ", 704, 96, 70, 16':
+                  'AddHeaderText designer, "lblHeadTag", "タグ", 679, 96, 95, 16',
+              'AddHeaderDivider designer, "lblHeadSep1", 556, 94, 20':
+                  'AddHeaderDivider designer, "lblHeadSep1", 461, 94, 20',
+              'AddHeaderDivider designer, "lblHeadSep2", 698, 94, 20':
+                  'AddHeaderDivider designer, "lblHeadSep2", 673, 94, 20',
+              'AddListBox designer, "lstResults", 510, 113, 270, 285':
+                  'AddListBox designer, "lstResults", 415, 113, 365, 285',
+              'CStr(140 * mFormScale) & " pt;" & _':
+                  'CStr(210 * mFormScale) & " pt;" & _',
+              'CStr(64 * mFormScale) & " pt"':
+                  'CStr(89 * mFormScale) & " pt"',
+          }
+
+          for old, new in replacements.items():
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"expected exactly one match for {old!r}, found {count}")
+              text = text.replace(old, new, 1)
+
+          required = [
+              'AddTextBox designer, "txtColumnB", 18, 37, 370, 24, False',
+              'AddTextBox designer, "txtColumnC", 18, 94, 370, 238, True',
+              'AddTextBox designer, "txtColumnD", 18, 366, 370, 24, False',
+              'AddTextBox designer, "txtSearch", 415, 37, 365, 24, False',
+              'AddListBox designer, "lstResults", 415, 113, 365, 285',
+              'CStr(210 * mFormScale) & " pt;" & _',
+              'CStr(89 * mFormScale) & " pt"',
+          ]
+          for value in required:
+              if value not in text:
+                  raise SystemExit(f"required output missing: {value}")
+
+          path.write_bytes(text.encode(encoding))
+          PY
+
+      - name: Commit patch and remove workflow
+        shell: bash
+        run: |
+          rm -f .github/workflows/temp-template-manager-layout.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "テンプレ管理用.bas" .github/workflows/temp-template-manager-layout.yml
+          git commit -m "テンプレ管理フォームの左右レイアウトを調整"
+          git push origin HEAD:agent/template-manager-layout
