@@ -561,7 +561,9 @@ Private Sub AddHeaderDivider( _
         .BorderStyle = 0
     End With
 
-End Sub'============================================================
+End Sub
+
+'============================================================
 ' テキストボックス追加
 '============================================================
 Private Sub AddTextBox( _
@@ -625,11 +627,10 @@ Private Sub AddListBox( _
         .BorderStyle = 1
         .SpecialEffect = 0
         .ColumnCount = 3
-            .ColumnWidths = _
-                CStr(45 * mFormScale) & " pt;" & _
-                CStr(140 * mFormScale) & " pt;" & _
-                CStr(64 * mFormScale) & " pt"
-    
+        .ColumnWidths = _
+            CStr(45 * mFormScale) & " pt;" & _
+            CStr(140 * mFormScale) & " pt;" & _
+            CStr(64 * mFormScale) & " pt"
         .IntegralHeight = False
     End With
 
