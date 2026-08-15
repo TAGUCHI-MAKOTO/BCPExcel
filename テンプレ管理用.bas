@@ -631,7 +631,7 @@ Private Sub AddListBox( _
             CStr(45 * mFormScale) & " pt;" & _
             CStr(210 * mFormScale) & " pt;" & _
             CStr(89 * mFormScale) & " pt"
-        .IntegralHeight = False
+        .IntegralHeight = True
     End With
 
 End Sub
