@@ -9,6 +9,8 @@ Option Explicit
 ' ・通常の TextBox 枠線に戻して余計な補助枠は使わない
 ' 24インチ FHD（1920×1080 / Windows表示倍率100%前後）を想定
 ' 通常版のレイアウト・配色はそのままに、全体を82%へ縮小
+' ・処理日時の次に「期日」入力欄を追加
+' ・オプション／タイプを下段へ移動
 '============================================================
 
 Private Const FORM_NAME As String = "frmRequestEntry"
@@ -194,13 +196,13 @@ Private Sub BuildRequestSection(ByVal designer As Object, _
     Dim innerLeft As Double
     Dim gapX As Double
     Dim w1 As Double, w2 As Double, w3 As Double
-    Dim w4 As Double, w5 As Double, w6 As Double
-    Dim rightLeft As Double, rightW As Double
+    Dim w4 As Double, w5 As Double, w6 As Double, w7 As Double
     Dim proxyX As Double
+    Dim processedX As Double
+    Dim dueDateX As Double
 
     '--------------------------------------------------------
-    ' 座標は計算で積み上げず、明示的に固定する
-    ' ※すべて Frame 内での Top
+    ' Frame 内の縦位置
     '--------------------------------------------------------
     Const LABEL_TOP As Double = 38
     Const ROW1_TOP As Double = 58
@@ -209,6 +211,10 @@ Private Sub BuildRequestSection(ByVal designer As Object, _
 
     Const ROW2_TOP As Double = ROW1_TOP + FIELD_H + ROW_GAP
     Const ROW3_TOP As Double = ROW2_TOP + FIELD_H + ROW_GAP
+
+    ' オプション／タイプは1段目より少し下へ
+    Const SUB_LABEL_TOP As Double = 94
+    Const SUB_ROW_TOP As Double = 112
 
     Set fra = AddFrame(designer, "fraSection" & idx, "", _
                        leftX, topY, areaW, areaH, backColor)
@@ -220,20 +226,27 @@ Private Sub BuildRequestSection(ByVal designer As Object, _
     innerLeft = 18
     gapX = 10
 
-    w1 = 165
-    w2 = 165
-    w3 = 165
-    w4 = 165
-    w5 = 165
-    w6 = 165
-
-    rightLeft = innerLeft + w1 + w2 + w3 + w4 + w5 + w6 + gapX * 6
-    rightW = areaW - rightLeft - 20
+    w1 = 165     ' 組織
+    w2 = 165     ' CA名
+    w3 = 165     ' 代理CA組織
+    w4 = 165     ' 代理CA名
+    w5 = 165     ' メールメモ
+    w6 = 165     ' 処理日時
+    w7 = 165     ' 期日
 
     proxyX = innerLeft + _
              (w1 + gapX) + _
              (w2 + gapX) + _
              (w3 + gapX)
+
+    processedX = innerLeft + _
+                 (w1 + gapX) + _
+                 (w2 + gapX) + _
+                 (w3 + gapX) + _
+                 (w4 + gapX) + _
+                 (w5 + gapX)
+
+    dueDateX = processedX + w6 + gapX
 
     AddLabel fra, "lblOrg" & idx, "組織", _
              innerLeft, LABEL_TOP, w1, 16, 9, True, False, CLR_MUTED
@@ -254,17 +267,10 @@ Private Sub BuildRequestSection(ByVal designer As Object, _
              LABEL_TOP, w5, 16, 9, True, False, CLR_MUTED
 
     AddLabel fra, "lblProcessedAt" & idx, "処理日時", _
-             innerLeft + (w1 + gapX) + (w2 + gapX) + _
-             (w3 + gapX) + (w4 + gapX) + (w5 + gapX), _
-             LABEL_TOP, w6, 16, 9, True, False, CLR_MUTED
+             processedX, LABEL_TOP, w6, 16, 9, True, False, CLR_MUTED
 
-    AddLabel fra, "lblOption" & idx, "オプション", _
-             rightLeft, LABEL_TOP, rightW * 0.42, 16, _
-             9, True, False, CLR_MUTED
-
-    AddLabel fra, "lblType" & idx, "タイプ", _
-             rightLeft + rightW * 0.46, LABEL_TOP, _
-             rightW * 0.5, 16, 9, True, False, CLR_MUTED
+    AddLabel fra, "lblDueDate" & idx, "期日", _
+             dueDateX, LABEL_TOP, w7, 16, 9, True, False, CLR_MUTED
 
     AddTextBox fra, "txtOrg" & idx, _
                innerLeft, ROW1_TOP, w1, FIELD_H
@@ -285,9 +291,10 @@ Private Sub BuildRequestSection(ByVal designer As Object, _
                ROW1_TOP, w5, FIELD_H
 
     AddTextBox fra, "txtProcessedAt" & idx, _
-               innerLeft + (w1 + gapX) + (w2 + gapX) + _
-               (w3 + gapX) + (w4 + gapX) + (w5 + gapX), _
-               ROW1_TOP, w6, FIELD_H
+               processedX, ROW1_TOP, w6, FIELD_H
+
+    AddTextBox fra, "txtDueDate" & idx, _
+               dueDateX, ROW1_TOP, w7, FIELD_H
 
     AddTextBox fra, "txtProxyCA" & idx & "_2", _
                proxyX, ROW2_TOP, w4, FIELD_H
@@ -295,12 +302,19 @@ Private Sub BuildRequestSection(ByVal designer As Object, _
     AddTextBox fra, "txtProxyCA" & idx & "_3", _
                proxyX, ROW3_TOP, w4, FIELD_H
 
+    AddLabel fra, "lblOption" & idx, "オプション", _
+             processedX, SUB_LABEL_TOP, w6, 16, _
+             9, True, False, CLR_MUTED
+
+    AddLabel fra, "lblType" & idx, "タイプ", _
+             dueDateX, SUB_LABEL_TOP, w7, 16, _
+             9, True, False, CLR_MUTED
+
     AddOptionPanel fra, idx, _
-                   rightLeft, ROW1_TOP, rightW * 0.42, 58
+                   processedX, SUB_ROW_TOP, w6, 58
 
     AddComboBox fra, "cmbType" & idx, _
-                rightLeft + rightW * 0.46, ROW1_TOP, _
-                rightW * 0.5, FIELD_H
+                dueDateX, SUB_ROW_TOP, w7, FIELD_H
 
 End Sub
 
