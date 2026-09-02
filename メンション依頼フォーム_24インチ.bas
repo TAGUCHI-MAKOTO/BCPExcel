@@ -1,4 +1,4 @@
-Attribute VB_Name = "modMentionRequestForm24"
+Attribute VB_Name = "modMentionRequestForm24V2"
 Option Explicit
 
 '============================================================
@@ -11,6 +11,9 @@ Option Explicit
 ' 通常版のレイアウト・配色はそのままに、全体を82%へ縮小
 ' ・「処理日時」の次に手入力用の「期日」を追加
 ' ・「オプション」「タイプ」は期日の右側へ移動
+' ・上部の「XU番号」を削除
+' ・「拠点」はプルダウン選択
+' ・「依頼者」はWindowsアカウント表示名を自動取得
 '============================================================
 
 Private Const FORM_NAME As String = "frmRequestEntry"
@@ -39,7 +42,7 @@ Private Const CLR_FIELD_BG As Long = &HFFFFFF
 Private Const CLR_BUTTON As Long = &HB88FC2
 Private Const CLR_BUTTON_TEXT As Long = &HFFFFFF
 
-Public Sub BuildMentionRequestForm24()
+Public Sub BuildMentionRequestForm24V2()
 
     Dim vbProj As Object
     Dim vbComp As Object
@@ -81,7 +84,7 @@ Public Sub BuildMentionRequestForm24()
     BuildFormLayout designer
     AddCodeStub vbComp
 
-    MsgBox "24インチモニター用フォームを作成しました。", vbInformation, "作成完了"
+    MsgBox "24インチ版フォーム（拠点選択・依頼者自動取得）を作成しました。", vbInformation, "作成完了"
     Exit Sub
 
 EH:
@@ -117,11 +120,13 @@ Private Sub BuildFormLayout(ByVal designer As Object)
 
     AddCommandButton designer, "cmdSend", "送信", _
                      marginX + contentW - 170, y, 150, 42, True
+
 End Sub
 
 Private Sub BuildHeaderArea(ByVal designer As Object, _
                             ByVal leftX As Double, ByVal topY As Double, _
                             ByVal areaW As Double, ByVal areaH As Double)
+
     Dim fra As Object
     Dim cardW As Double
     Dim gapX As Double
@@ -131,18 +136,25 @@ Private Sub BuildHeaderArea(ByVal designer As Object, _
 
     AddColorBar fra, "barHeader", 0, 0, 9, areaH, CLR_ACCENT
 
-    gapX = 28
-    cardW = (areaW - 36 - gapX * 2) / 3
+    gapX = 36
+    cardW = (areaW - 54 - gapX) / 2
 
-    BuildHeaderCard fra, "hdrBase", "依頼拠点", 18, 7, cardW, 34
-    BuildHeaderCard fra, "hdrXU", "XU番号", 18 + cardW + gapX, 7, cardW, 34
-    BuildHeaderCard fra, "hdrRequester", "依頼者", 18 + (cardW + gapX) * 2, 7, cardW, 34
+    AddLabel fra, "lblBaseTitle", "拠点", _
+             18, 7, cardW, 13, 8.5, True, False, CLR_MUTED
+
+    AddComboBox fra, "cmbRequestBase", _
+                18, 22, cardW, 22
+
+    BuildHeaderCard fra, "hdrRequester", "依頼者", _
+                    18 + cardW + gapX, 7, cardW, 34
+
 End Sub
 
 Private Sub BuildHeaderCard(ByVal parent As Object, _
                             ByVal key As String, ByVal titleText As String, _
                             ByVal leftX As Double, ByVal topY As Double, _
                             ByVal cardW As Double, ByVal cardH As Double)
+
     Dim box As Object
 
     AddLabel parent, "lbl" & key & "Title", titleText, _
@@ -159,6 +171,7 @@ Private Sub BuildHeaderCard(ByVal parent As Object, _
         .Caption = " "
         .SpecialEffect = fmSpecialEffectFlat
     End With
+
 End Sub
 
 Private Sub BuildRequestSection(ByVal designer As Object, _
@@ -182,6 +195,7 @@ Private Sub BuildRequestSection(ByVal designer As Object, _
     Const ROW1_TOP As Double = 58
     Const FIELD_H As Double = 28
     Const ROW_GAP As Double = 12
+
     Const ROW2_TOP As Double = ROW1_TOP + FIELD_H + ROW_GAP
     Const ROW3_TOP As Double = ROW2_TOP + FIELD_H + ROW_GAP
 
@@ -238,13 +252,16 @@ Private Sub BuildRequestSection(ByVal designer As Object, _
     AddOptionPanel fra, idx, rightLeft, ROW1_TOP, rightW * 0.42, 58
     AddComboBox fra, "cmbType" & idx, _
                 rightLeft + rightW * 0.46, ROW1_TOP, rightW * 0.5, FIELD_H
+
 End Sub
 
 Private Sub AddOptionPanel(ByVal parent As Object, ByVal idx As Long, _
                            ByVal leftX As Double, ByVal topY As Double, _
                            ByVal panelW As Double, ByVal panelH As Double)
+
     Dim pan As Object
     Set pan = AddFrame(parent, "fraOption" & idx, "", leftX, topY, panelW, panelH, CLR_WHITE)
+
     AddCheckBox pan, "chkShort" & idx, "時短", 10, 8, panelW - 20, 18
     AddCheckBox pan, "chkUrgent" & idx, "至急", 10, 30, panelW - 20, 18
 End Sub
@@ -255,6 +272,7 @@ Private Function AddFrame(ByVal parent As Object, ByVal ctlName As String, ByVal
                           Optional ByVal backColor As Long = -1) As Object
     Dim ctl As Object
     Set ctl = parent.Controls.Add("Forms.Frame.1", ctlName, True)
+
     With ctl
         .Caption = captionText
         .Left = S(leftX)
@@ -269,6 +287,7 @@ Private Function AddFrame(ByVal parent As Object, ByVal ctlName As String, ByVal
             .Size = 9
         End With
     End With
+
     Set AddFrame = ctl
 End Function
 
@@ -323,6 +342,7 @@ Private Function AddLabel(ByVal parent As Object, _
                           Optional ByVal foreColor As Long = -1) As Object
     Dim ctl As Object
     Set ctl = parent.Controls.Add("Forms.Label.1", ctlName, True)
+
     With ctl
         .Caption = captionText
         .Left = S(leftX)
@@ -337,6 +357,7 @@ Private Function AddLabel(ByVal parent As Object, _
             .Bold = boldFlg
         End With
     End With
+
     Set AddLabel = ctl
 End Function
 
@@ -345,6 +366,7 @@ Private Function AddTextBox(ByVal parent As Object, ByVal ctlName As String, _
                             ByVal ctlW As Double, ByVal ctlH As Double) As Object
     Dim ctl As Object
     Set ctl = parent.Controls.Add("Forms.TextBox.1", ctlName, True)
+
     With ctl
         .Left = S(leftX)
         .Top = S(topY)
@@ -359,6 +381,7 @@ Private Function AddTextBox(ByVal parent As Object, ByVal ctlName As String, _
             .Size = 10
         End With
     End With
+
     Set AddTextBox = ctl
 End Function
 
@@ -367,6 +390,7 @@ Private Function AddCheckBox(ByVal parent As Object, ByVal ctlName As String, By
                              ByVal ctlW As Double, ByVal ctlH As Double) As Object
     Dim ctl As Object
     Set ctl = parent.Controls.Add("Forms.CheckBox.1", ctlName, True)
+
     With ctl
         .Caption = captionText
         .Left = S(leftX)
@@ -380,6 +404,7 @@ Private Function AddCheckBox(ByVal parent As Object, ByVal ctlName As String, By
             .Size = 10
         End With
     End With
+
     Set AddCheckBox = ctl
 End Function
 
@@ -388,6 +413,7 @@ Private Function AddComboBox(ByVal parent As Object, ByVal ctlName As String, _
                              ByVal ctlW As Double, ByVal ctlH As Double) As Object
     Dim ctl As Object
     Set ctl = parent.Controls.Add("Forms.ComboBox.1", ctlName, True)
+
     With ctl
         .Left = S(leftX)
         .Top = S(topY)
@@ -402,6 +428,7 @@ Private Function AddComboBox(ByVal parent As Object, ByVal ctlName As String, _
             .Size = 10
         End With
     End With
+
     Set AddComboBox = ctl
 End Function
 
@@ -411,6 +438,7 @@ Private Function AddCommandButton(ByVal parent As Object, ByVal ctlName As Strin
                                   Optional ByVal primaryButton As Boolean = False) As Object
     Dim ctl As Object
     Set ctl = parent.Controls.Add("Forms.CommandButton.1", ctlName, True)
+
     With ctl
         .Caption = captionText
         .Left = S(leftX)
@@ -427,18 +455,29 @@ Private Function AddCommandButton(ByVal parent As Object, ByVal ctlName As Strin
             .Bold = True
         End With
     End With
+
     Set AddCommandButton = ctl
 End Function
 
 Private Sub AddCodeStub(ByVal vbComp As Object)
+
     Dim cm As Object
     Dim src As String
+
     Set cm = vbComp.CodeModule
 
     src = _
         "Option Explicit" & vbCrLf & vbCrLf & _
         "Private Sub UserForm_Initialize()" & vbCrLf & _
-        "    Dim i As Long" & vbCrLf & _
+        "    Dim i As Long" & vbCrLf & vbCrLf & _
+        "    With Me.Controls(""cmbRequestBase"")" & vbCrLf & _
+        "        .Clear" & vbCrLf & _
+        "        .AddItem ""呉服""" & vbCrLf & _
+        "        .AddItem ""札幌""" & vbCrLf & _
+        "        .AddItem ""新潟""" & vbCrLf & _
+        "        .ListIndex = -1" & vbCrLf & _
+        "    End With" & vbCrLf & vbCrLf & _
+        "    Me.Controls(""lblhdrRequesterValue"").Caption = "" "" & GetWindowsDisplayName()" & vbCrLf & vbCrLf & _
         "    For i = 1 To 3" & vbCrLf & _
         "        With Me.Controls(""cmbType"" & i)" & vbCrLf & _
         "            .Clear" & vbCrLf & _
@@ -450,20 +489,44 @@ Private Sub AddCodeStub(ByVal vbComp As Object)
         "        End With" & vbCrLf & _
         "    Next i" & vbCrLf & _
         "End Sub" & vbCrLf & vbCrLf & _
+        "Private Function GetWindowsDisplayName() As String" & vbCrLf & _
+        "    Dim userName As String" & vbCrLf & _
+        "    Dim domainName As String" & vbCrLf & _
+        "    Dim objUser As Object" & vbCrLf & vbCrLf & _
+        "    On Error GoTo Fallback" & vbCrLf & vbCrLf & _
+        "    userName = Environ$(""USERNAME"")" & vbCrLf & _
+        "    domainName = Environ$(""USERDOMAIN"")" & vbCrLf & vbCrLf & _
+        "    If Len(domainName) > 0 And Len(userName) > 0 Then" & vbCrLf & _
+        "        Set objUser = GetObject(""WinNT://"" & domainName & ""/"" & userName & "",user"")" & vbCrLf & _
+        "        If Len(Trim$(CStr(objUser.FullName))) > 0 Then" & vbCrLf & _
+        "            GetWindowsDisplayName = CStr(objUser.FullName)" & vbCrLf & _
+        "            Exit Function" & vbCrLf & _
+        "        End If" & vbCrLf & _
+        "    End If" & vbCrLf & vbCrLf & _
+        "Fallback:" & vbCrLf & _
+        "    If Len(userName) = 0 Then userName = Environ$(""USERNAME"")" & vbCrLf & _
+        "    GetWindowsDisplayName = userName" & vbCrLf & _
+        "End Function" & vbCrLf & vbCrLf & _
         "Private Sub cmdSend_Click()" & vbCrLf & _
+        "    If Me.Controls(""cmbRequestBase"").ListIndex < 0 Then" & vbCrLf & _
+        "        MsgBox ""拠点を選択してください。"", vbExclamation" & vbCrLf & _
+        "        Me.Controls(""cmbRequestBase"").SetFocus" & vbCrLf & _
+        "        Exit Sub" & vbCrLf & _
+        "    End If" & vbCrLf & vbCrLf & _
         "    MsgBox ""送信処理は未実装です。ここに処理を書いてください。"", vbInformation" & vbCrLf & _
         "End Sub" & vbCrLf
 
     cm.AddFromString src
+
 End Sub
 
 Public Sub SetRequestHeader(ByVal frm As Object, _
-                            ByVal requestBase As String, _
-                            ByVal xuNumber As String, _
-                            ByVal requester As String)
-    frm.Controls("lblhdrBaseValue").Caption = " " & requestBase
-    frm.Controls("lblhdrXUValue").Caption = " " & xuNumber
-    frm.Controls("lblhdrRequesterValue").Caption = " " & requester
+                            ByVal requestBase As String)
+
+    On Error Resume Next
+    frm.Controls("cmbRequestBase").Value = requestBase
+    On Error GoTo 0
+
 End Sub
 
 Private Function S(ByVal v As Double) As Double
