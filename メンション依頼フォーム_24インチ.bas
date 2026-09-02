@@ -9,8 +9,8 @@ Option Explicit
 ' ・通常の TextBox 枠線に戻して余計な補助枠は使わない
 ' 24インチ FHD（1920×1080 / Windows表示倍率100%前後）を想定
 ' 通常版のレイアウト・配色はそのままに、全体を82%へ縮小
-' ・処理日時の次に「期日」入力欄を追加
-' ・オプション／タイプを下段へ移動
+' ・「処理日時」の次に手入力用の「期日」を追加
+' ・「オプション」「タイプ」は期日の右側へ移動
 '============================================================
 
 Private Const FORM_NAME As String = "frmRequestEntry"
@@ -68,7 +68,7 @@ Public Sub BuildMentionRequestForm24()
 
     With vbComp.Properties
         .Item("Caption") = "依頼入力"
-        .Item("Width") = S(1435)
+        .Item("Width") = S(1610)
         .Item("Height") = S(820)
         .Item("StartUpPosition") = 2
         .Item("BackColor") = CLR_FORM_BG
@@ -98,22 +98,14 @@ Private Sub BuildFormLayout(ByVal designer As Object)
     Dim secGap As Double
 
     marginX = 18
-    contentW = 1380
+    contentW = 1550
 
-    ' タイトル帯は削除
-    ' その分、フォーム上部に少し余裕を持たせる
     y = 22
-
-    ' セクション間は少し広め
     secGap = 24
 
-    ' 自動取得エリア
     BuildHeaderArea designer, marginX, y, contentW, 52
-
-    ' ヘッダー下もゆったりめ
     y = y + 78
 
-    ' 入力セクション
     BuildRequestSection designer, 1, marginX, y, contentW, 184, CLR_SECTION1
     y = y + 184 + secGap
 
@@ -123,16 +115,13 @@ Private Sub BuildFormLayout(ByVal designer As Object)
     BuildRequestSection designer, 3, marginX, y, contentW, 184, CLR_SECTION3
     y = y + 184 + 28
 
-    ' 送信ボタン
     AddCommandButton designer, "cmdSend", "送信", _
                      marginX + contentW - 170, y, 150, 42, True
-
 End Sub
 
 Private Sub BuildHeaderArea(ByVal designer As Object, _
                             ByVal leftX As Double, ByVal topY As Double, _
                             ByVal areaW As Double, ByVal areaH As Double)
-
     Dim fra As Object
     Dim cardW As Double
     Dim gapX As Double
@@ -142,36 +131,23 @@ Private Sub BuildHeaderArea(ByVal designer As Object, _
 
     AddColorBar fra, "barHeader", 0, 0, 9, areaH, CLR_ACCENT
 
-    ' 横方向も少し余裕を持たせる
     gapX = 28
     cardW = (areaW - 36 - gapX * 2) / 3
 
-    ' 自動取得値なので、入力欄のような高さは使わず
-    ' ラベルに近い高さでコンパクト表示
-    BuildHeaderCard fra, "hdrBase", "依頼拠点", _
-                    18, 7, cardW, 34
-
-    BuildHeaderCard fra, "hdrXU", "XU番号", _
-                    18 + cardW + gapX, 7, cardW, 34
-
-    BuildHeaderCard fra, "hdrRequester", "依頼者", _
-                    18 + (cardW + gapX) * 2, 7, cardW, 34
-
+    BuildHeaderCard fra, "hdrBase", "依頼拠点", 18, 7, cardW, 34
+    BuildHeaderCard fra, "hdrXU", "XU番号", 18 + cardW + gapX, 7, cardW, 34
+    BuildHeaderCard fra, "hdrRequester", "依頼者", 18 + (cardW + gapX) * 2, 7, cardW, 34
 End Sub
 
 Private Sub BuildHeaderCard(ByVal parent As Object, _
                             ByVal key As String, ByVal titleText As String, _
                             ByVal leftX As Double, ByVal topY As Double, _
                             ByVal cardW As Double, ByVal cardH As Double)
-
     Dim box As Object
 
-    ' 項目名
     AddLabel parent, "lbl" & key & "Title", titleText, _
              leftX, topY, cardW, 13, 8.5, True, False, CLR_MUTED
 
-    ' 自動取得値
-    ' 入力用TextBoxではなく、薄い色の小さな表示ラベルとして扱う
     Set box = AddLabel(parent, "lbl" & key & "Value", "", _
                        leftX, topY + 15, cardW, 17, _
                        9.5, True, False, CLR_TEXT)
@@ -183,7 +159,6 @@ Private Sub BuildHeaderCard(ByVal parent As Object, _
         .Caption = " "
         .SpecialEffect = fmSpecialEffectFlat
     End With
-
 End Sub
 
 Private Sub BuildRequestSection(ByVal designer As Object, _
@@ -197,24 +172,18 @@ Private Sub BuildRequestSection(ByVal designer As Object, _
     Dim gapX As Double
     Dim w1 As Double, w2 As Double, w3 As Double
     Dim w4 As Double, w5 As Double, w6 As Double, w7 As Double
+    Dim rightLeft As Double, rightW As Double
     Dim proxyX As Double
+    Dim mailMemoX As Double
     Dim processedX As Double
     Dim dueDateX As Double
 
-    '--------------------------------------------------------
-    ' Frame 内の縦位置
-    '--------------------------------------------------------
     Const LABEL_TOP As Double = 38
     Const ROW1_TOP As Double = 58
     Const FIELD_H As Double = 28
     Const ROW_GAP As Double = 12
-
     Const ROW2_TOP As Double = ROW1_TOP + FIELD_H + ROW_GAP
     Const ROW3_TOP As Double = ROW2_TOP + FIELD_H + ROW_GAP
-
-    ' オプション／タイプは1段目より少し下へ
-    Const SUB_LABEL_TOP As Double = 94
-    Const SUB_ROW_TOP As Double = 112
 
     Set fra = AddFrame(designer, "fraSection" & idx, "", _
                        leftX, topY, areaW, areaH, backColor)
@@ -226,105 +195,56 @@ Private Sub BuildRequestSection(ByVal designer As Object, _
     innerLeft = 18
     gapX = 10
 
-    w1 = 165     ' 組織
-    w2 = 165     ' CA名
-    w3 = 165     ' 代理CA組織
-    w4 = 165     ' 代理CA名
-    w5 = 165     ' メールメモ
-    w6 = 165     ' 処理日時
-    w7 = 165     ' 期日
+    w1 = 165
+    w2 = 165
+    w3 = 165
+    w4 = 165
+    w5 = 165
+    w6 = 165
+    w7 = 135
 
-    proxyX = innerLeft + _
-             (w1 + gapX) + _
-             (w2 + gapX) + _
-             (w3 + gapX)
-
-    processedX = innerLeft + _
-                 (w1 + gapX) + _
-                 (w2 + gapX) + _
-                 (w3 + gapX) + _
-                 (w4 + gapX) + _
-                 (w5 + gapX)
-
+    proxyX = innerLeft + (w1 + gapX) + (w2 + gapX) + (w3 + gapX)
+    mailMemoX = proxyX + w4 + gapX
+    processedX = mailMemoX + w5 + gapX
     dueDateX = processedX + w6 + gapX
 
-    AddLabel fra, "lblOrg" & idx, "組織", _
-             innerLeft, LABEL_TOP, w1, 16, 9, True, False, CLR_MUTED
+    rightLeft = dueDateX + w7 + gapX
+    rightW = areaW - rightLeft - 20
 
-    AddLabel fra, "lblCA" & idx, "CA名", _
-             innerLeft + w1 + gapX, LABEL_TOP, w2, 16, 9, True, False, CLR_MUTED
-
-    AddLabel fra, "lblProxyOrg" & idx, "代理CA組織", _
-             innerLeft + (w1 + gapX) + (w2 + gapX), _
-             LABEL_TOP, w3, 16, 9, True, False, CLR_MUTED
-
-    AddLabel fra, "lblProxyCA" & idx, "代理CA名", _
-             proxyX, LABEL_TOP, w4, 16, 9, True, False, CLR_MUTED
-
-    AddLabel fra, "lblMailMemo" & idx, "メールメモ", _
-             innerLeft + (w1 + gapX) + (w2 + gapX) + _
-             (w3 + gapX) + (w4 + gapX), _
-             LABEL_TOP, w5, 16, 9, True, False, CLR_MUTED
-
-    AddLabel fra, "lblProcessedAt" & idx, "処理日時", _
-             processedX, LABEL_TOP, w6, 16, 9, True, False, CLR_MUTED
-
-    AddLabel fra, "lblDueDate" & idx, "期日", _
-             dueDateX, LABEL_TOP, w7, 16, 9, True, False, CLR_MUTED
-
-    AddTextBox fra, "txtOrg" & idx, _
-               innerLeft, ROW1_TOP, w1, FIELD_H
-
-    AddTextBox fra, "txtCA" & idx, _
-               innerLeft + w1 + gapX, ROW1_TOP, w2, FIELD_H
-
-    AddTextBox fra, "txtProxyOrg" & idx, _
-               innerLeft + (w1 + gapX) + (w2 + gapX), _
-               ROW1_TOP, w3, FIELD_H
-
-    AddTextBox fra, "txtProxyCA" & idx & "_1", _
-               proxyX, ROW1_TOP, w4, FIELD_H
-
-    AddTextBox fra, "txtMailMemo" & idx, _
-               innerLeft + (w1 + gapX) + (w2 + gapX) + _
-               (w3 + gapX) + (w4 + gapX), _
-               ROW1_TOP, w5, FIELD_H
-
-    AddTextBox fra, "txtProcessedAt" & idx, _
-               processedX, ROW1_TOP, w6, FIELD_H
-
-    AddTextBox fra, "txtDueDate" & idx, _
-               dueDateX, ROW1_TOP, w7, FIELD_H
-
-    AddTextBox fra, "txtProxyCA" & idx & "_2", _
-               proxyX, ROW2_TOP, w4, FIELD_H
-
-    AddTextBox fra, "txtProxyCA" & idx & "_3", _
-               proxyX, ROW3_TOP, w4, FIELD_H
+    AddLabel fra, "lblOrg" & idx, "組織", innerLeft, LABEL_TOP, w1, 16, 9, True, False, CLR_MUTED
+    AddLabel fra, "lblCA" & idx, "CA名", innerLeft + w1 + gapX, LABEL_TOP, w2, 16, 9, True, False, CLR_MUTED
+    AddLabel fra, "lblProxyOrg" & idx, "代理CA組織", innerLeft + (w1 + gapX) + (w2 + gapX), LABEL_TOP, w3, 16, 9, True, False, CLR_MUTED
+    AddLabel fra, "lblProxyCA" & idx, "代理CA名", proxyX, LABEL_TOP, w4, 16, 9, True, False, CLR_MUTED
+    AddLabel fra, "lblMailMemo" & idx, "メールメモ", mailMemoX, LABEL_TOP, w5, 16, 9, True, False, CLR_MUTED
+    AddLabel fra, "lblProcessedAt" & idx, "処理日時", processedX, LABEL_TOP, w6, 16, 9, True, False, CLR_MUTED
+    AddLabel fra, "lblDueDate" & idx, "期日", dueDateX, LABEL_TOP, w7, 16, 9, True, False, CLR_MUTED
 
     AddLabel fra, "lblOption" & idx, "オプション", _
-             processedX, SUB_LABEL_TOP, w6, 16, _
-             9, True, False, CLR_MUTED
-
+             rightLeft, LABEL_TOP, rightW * 0.42, 16, 9, True, False, CLR_MUTED
     AddLabel fra, "lblType" & idx, "タイプ", _
-             dueDateX, SUB_LABEL_TOP, w7, 16, _
-             9, True, False, CLR_MUTED
+             rightLeft + rightW * 0.46, LABEL_TOP, rightW * 0.5, 16, 9, True, False, CLR_MUTED
 
-    AddOptionPanel fra, idx, _
-                   processedX, SUB_ROW_TOP, w6, 58
+    AddTextBox fra, "txtOrg" & idx, innerLeft, ROW1_TOP, w1, FIELD_H
+    AddTextBox fra, "txtCA" & idx, innerLeft + w1 + gapX, ROW1_TOP, w2, FIELD_H
+    AddTextBox fra, "txtProxyOrg" & idx, innerLeft + (w1 + gapX) + (w2 + gapX), ROW1_TOP, w3, FIELD_H
+    AddTextBox fra, "txtProxyCA" & idx & "_1", proxyX, ROW1_TOP, w4, FIELD_H
+    AddTextBox fra, "txtMailMemo" & idx, mailMemoX, ROW1_TOP, w5, FIELD_H
+    AddTextBox fra, "txtProcessedAt" & idx, processedX, ROW1_TOP, w6, FIELD_H
+    AddTextBox fra, "txtDueDate" & idx, dueDateX, ROW1_TOP, w7, FIELD_H
 
+    AddTextBox fra, "txtProxyCA" & idx & "_2", proxyX, ROW2_TOP, w4, FIELD_H
+    AddTextBox fra, "txtProxyCA" & idx & "_3", proxyX, ROW3_TOP, w4, FIELD_H
+
+    AddOptionPanel fra, idx, rightLeft, ROW1_TOP, rightW * 0.42, 58
     AddComboBox fra, "cmbType" & idx, _
-                dueDateX, SUB_ROW_TOP, w7, FIELD_H
-
+                rightLeft + rightW * 0.46, ROW1_TOP, rightW * 0.5, FIELD_H
 End Sub
 
 Private Sub AddOptionPanel(ByVal parent As Object, ByVal idx As Long, _
                            ByVal leftX As Double, ByVal topY As Double, _
                            ByVal panelW As Double, ByVal panelH As Double)
-
     Dim pan As Object
     Set pan = AddFrame(parent, "fraOption" & idx, "", leftX, topY, panelW, panelH, CLR_WHITE)
-
     AddCheckBox pan, "chkShort" & idx, "時短", 10, 8, panelW - 20, 18
     AddCheckBox pan, "chkUrgent" & idx, "至急", 10, 30, panelW - 20, 18
 End Sub
@@ -335,7 +255,6 @@ Private Function AddFrame(ByVal parent As Object, ByVal ctlName As String, ByVal
                           Optional ByVal backColor As Long = -1) As Object
     Dim ctl As Object
     Set ctl = parent.Controls.Add("Forms.Frame.1", ctlName, True)
-
     With ctl
         .Caption = captionText
         .Left = S(leftX)
@@ -350,7 +269,6 @@ Private Function AddFrame(ByVal parent As Object, ByVal ctlName As String, ByVal
             .Size = 9
         End With
     End With
-
     Set AddFrame = ctl
 End Function
 
@@ -405,7 +323,6 @@ Private Function AddLabel(ByVal parent As Object, _
                           Optional ByVal foreColor As Long = -1) As Object
     Dim ctl As Object
     Set ctl = parent.Controls.Add("Forms.Label.1", ctlName, True)
-
     With ctl
         .Caption = captionText
         .Left = S(leftX)
@@ -420,7 +337,6 @@ Private Function AddLabel(ByVal parent As Object, _
             .Bold = boldFlg
         End With
     End With
-
     Set AddLabel = ctl
 End Function
 
@@ -429,7 +345,6 @@ Private Function AddTextBox(ByVal parent As Object, ByVal ctlName As String, _
                             ByVal ctlW As Double, ByVal ctlH As Double) As Object
     Dim ctl As Object
     Set ctl = parent.Controls.Add("Forms.TextBox.1", ctlName, True)
-
     With ctl
         .Left = S(leftX)
         .Top = S(topY)
@@ -444,7 +359,6 @@ Private Function AddTextBox(ByVal parent As Object, ByVal ctlName As String, _
             .Size = 10
         End With
     End With
-
     Set AddTextBox = ctl
 End Function
 
@@ -453,7 +367,6 @@ Private Function AddCheckBox(ByVal parent As Object, ByVal ctlName As String, By
                              ByVal ctlW As Double, ByVal ctlH As Double) As Object
     Dim ctl As Object
     Set ctl = parent.Controls.Add("Forms.CheckBox.1", ctlName, True)
-
     With ctl
         .Caption = captionText
         .Left = S(leftX)
@@ -467,7 +380,6 @@ Private Function AddCheckBox(ByVal parent As Object, ByVal ctlName As String, By
             .Size = 10
         End With
     End With
-
     Set AddCheckBox = ctl
 End Function
 
@@ -476,7 +388,6 @@ Private Function AddComboBox(ByVal parent As Object, ByVal ctlName As String, _
                              ByVal ctlW As Double, ByVal ctlH As Double) As Object
     Dim ctl As Object
     Set ctl = parent.Controls.Add("Forms.ComboBox.1", ctlName, True)
-
     With ctl
         .Left = S(leftX)
         .Top = S(topY)
@@ -491,7 +402,6 @@ Private Function AddComboBox(ByVal parent As Object, ByVal ctlName As String, _
             .Size = 10
         End With
     End With
-
     Set AddComboBox = ctl
 End Function
 
@@ -501,7 +411,6 @@ Private Function AddCommandButton(ByVal parent As Object, ByVal ctlName As Strin
                                   Optional ByVal primaryButton As Boolean = False) As Object
     Dim ctl As Object
     Set ctl = parent.Controls.Add("Forms.CommandButton.1", ctlName, True)
-
     With ctl
         .Caption = captionText
         .Left = S(leftX)
@@ -518,14 +427,12 @@ Private Function AddCommandButton(ByVal parent As Object, ByVal ctlName As Strin
             .Bold = True
         End With
     End With
-
     Set AddCommandButton = ctl
 End Function
 
 Private Sub AddCodeStub(ByVal vbComp As Object)
     Dim cm As Object
     Dim src As String
-
     Set cm = vbComp.CodeModule
 
     src = _
@@ -554,7 +461,6 @@ Public Sub SetRequestHeader(ByVal frm As Object, _
                             ByVal requestBase As String, _
                             ByVal xuNumber As String, _
                             ByVal requester As String)
-
     frm.Controls("lblhdrBaseValue").Caption = " " & requestBase
     frm.Controls("lblhdrXUValue").Caption = " " & xuNumber
     frm.Controls("lblhdrRequesterValue").Caption = " " & requester
