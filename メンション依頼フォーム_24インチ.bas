@@ -1,4 +1,4 @@
-Attribute VB_Name = "modMentionRequestForm24V3"
+Attribute VB_Name = "modMentionRequestForm24V9"
 Option Explicit
 
 '============================================================
@@ -14,6 +14,18 @@ Option Explicit
 ' ・上部の「XU番号」を削除
 ' ・「拠点」はプルダウン選択
 ' ・「依頼者」はWindowsアカウント表示名を自動取得
+' ・拠点／依頼者は送信ボタンと同じフッター行へ移動
+' ・依頼2／依頼3は初期非表示
+' ・「2件目を入力」「3件目を入力」で段階表示
+' ・表示件数に合わせてUserFormの高さを自動調整
+' ・「依頼1/2/3」見出しの囲み枠を削除
+' ・時短／至急のオプション枠を削除
+' ・タイプをメールメモ／処理日時／期日の下へ移動
+' ・長文タイプに対応するため、タイプ欄を3項目分の横幅へ拡張
+' ・「2件目／3件目を入力」ボタンをタイプ欄の下へ移動
+' ・全体の横幅をコンパクトに再調整
+' ・右側の余白を削減し、オプション領域を必要最小限に調整
+' ・追加依頼ボタンの右端をタイプ欄の右端に揃える
 '============================================================
 
 Private Const FORM_NAME As String = "frmRequestEntry"
@@ -42,7 +54,7 @@ Private Const CLR_FIELD_BG As Long = &HFFFFFF
 Private Const CLR_BUTTON As Long = &HB88FC2
 Private Const CLR_BUTTON_TEXT As Long = &HFFFFFF
 
-Public Sub BuildMentionRequestForm24V3()
+Public Sub BuildMentionRequestForm24V9()
 
     Dim vbProj As Object
     Dim vbComp As Object
@@ -71,12 +83,12 @@ Public Sub BuildMentionRequestForm24V3()
 
     With vbComp.Properties
         .Item("Caption") = "依頼入力"
-        .Item("Width") = S(1610)
-        .Item("Height") = S(820)
+        .Item("Width") = S(1320)
+        .Item("Height") = S(760)
         .Item("StartUpPosition") = 2
         .Item("BackColor") = CLR_FORM_BG
-        .Item("ScrollBars") = fmScrollBarsVertical
-        .Item("KeepScrollBarsVisible") = 1
+        .Item("ScrollBars") = 0
+        .Item("KeepScrollBarsVisible") = 0
     End With
 
     Set designer = vbComp.Designer
@@ -84,7 +96,7 @@ Public Sub BuildMentionRequestForm24V3()
     BuildFormLayout designer
     AddCodeStub vbComp
 
-    MsgBox "24インチ版フォーム（拠点選択・依頼者自動取得）を作成しました。", vbInformation, "作成完了"
+    MsgBox "24インチ版フォーム（右余白削減・ボタン右揃え）を作成しました。", vbInformation, "作成完了"
     Exit Sub
 
 EH:
@@ -101,64 +113,46 @@ Private Sub BuildFormLayout(ByVal designer As Object)
     Dim secGap As Double
 
     marginX = 18
-    contentW = 1550
+    contentW = 1260
     y = 22
     secGap = 24
 
-    BuildHeaderArea designer, marginX, y, contentW, 52
-    y = y + 78
+    BuildRequestSection designer, 1, marginX, y, contentW, 196, CLR_SECTION1
+    y = y + 196 + secGap
 
-    BuildRequestSection designer, 1, marginX, y, contentW, 184, CLR_SECTION1
-    y = y + 184 + secGap
+    BuildRequestSection designer, 2, marginX, y, contentW, 196, CLR_SECTION2
+    y = y + 196 + secGap
 
-    BuildRequestSection designer, 2, marginX, y, contentW, 184, CLR_SECTION2
-    y = y + 184 + secGap
+    BuildRequestSection designer, 3, marginX, y, contentW, 196, CLR_SECTION3
+    y = y + 196 + 24
 
-    BuildRequestSection designer, 3, marginX, y, contentW, 184, CLR_SECTION3
-    y = y + 184 + 28
+    BuildFooterArea designer, marginX, y, contentW, 62
 
-    AddCommandButton designer, "cmdSend", "送信", _
-                     marginX + contentW - 170, y, 150, 42, True
 End Sub
 
-Private Sub BuildHeaderArea(ByVal designer As Object, _
+Private Sub BuildFooterArea(ByVal designer As Object, _
                             ByVal leftX As Double, ByVal topY As Double, _
                             ByVal areaW As Double, ByVal areaH As Double)
 
     Dim fra As Object
-    Dim cardW As Double
-    Dim gapX As Double
-
-    Set fra = AddFrame(designer, "fraHeaderArea", "", _
-                       leftX, topY, areaW, areaH, RGB(255, 255, 255))
-
-    AddColorBar fra, "barHeader", 0, 0, 9, areaH, CLR_ACCENT
-
-    gapX = 36
-    cardW = (areaW - 54 - gapX) / 2
-
-    AddLabel fra, "lblBaseTitle", "拠点", _
-             18, 7, cardW, 13, 8.5, True, False, CLR_MUTED
-
-    AddComboBox fra, "cmbRequestBase", _
-                18, 22, cardW, 22
-
-    BuildHeaderCard fra, "hdrRequester", "依頼者", _
-                    18 + cardW + gapX, 7, cardW, 34
-End Sub
-
-Private Sub BuildHeaderCard(ByVal parent As Object, _
-                            ByVal key As String, ByVal titleText As String, _
-                            ByVal leftX As Double, ByVal topY As Double, _
-                            ByVal cardW As Double, ByVal cardH As Double)
-
     Dim box As Object
 
-    AddLabel parent, "lbl" & key & "Title", titleText, _
-             leftX, topY, cardW, 13, 8.5, True, False, CLR_MUTED
+    Set fra = AddFrame(designer, "fraFooter", "", _
+                       leftX, topY, areaW, areaH, RGB(255, 255, 255))
 
-    Set box = AddLabel(parent, "lbl" & key & "Value", "", _
-                       leftX, topY + 15, cardW, 17, _
+    AddColorBar fra, "barFooter", 0, 0, 9, areaH, CLR_ACCENT
+
+    AddLabel fra, "lblBaseTitle", "拠点", _
+             18, 8, 185, 13, 8.5, True, False, CLR_MUTED
+
+    AddComboBox fra, "cmbRequestBase", _
+                18, 24, 185, 24
+
+    AddLabel fra, "lblRequesterTitle", "依頼者", _
+             230, 8, 250, 13, 8.5, True, False, CLR_MUTED
+
+    Set box = AddLabel(fra, "lblRequesterValue", "", _
+                       230, 24, 300, 24, _
                        9.5, True, False, CLR_TEXT)
 
     With box
@@ -168,6 +162,10 @@ Private Sub BuildHeaderCard(ByVal parent As Object, _
         .Caption = " "
         .SpecialEffect = fmSpecialEffectFlat
     End With
+
+    AddCommandButton fra, "cmdSend", "送信", _
+                     areaW - 170, 10, 150, 42, True
+
 End Sub
 
 Private Sub BuildRequestSection(ByVal designer As Object, _
@@ -186,6 +184,9 @@ Private Sub BuildRequestSection(ByVal designer As Object, _
     Dim mailMemoX As Double
     Dim processedX As Double
     Dim dueDateX As Double
+    Dim typeW As Double
+    Dim addBtnW As Double
+    Dim addBtnX As Double
 
     Const LABEL_TOP As Double = 38
     Const ROW1_TOP As Double = 58
@@ -194,6 +195,14 @@ Private Sub BuildRequestSection(ByVal designer As Object, _
 
     Const ROW2_TOP As Double = ROW1_TOP + FIELD_H + ROW_GAP
     Const ROW3_TOP As Double = ROW2_TOP + FIELD_H + ROW_GAP
+
+    ' タイプはメールメモ・処理日時・期日の下へ配置
+    Const TYPE_LABEL_TOP As Double = 98
+    Const TYPE_ROW_TOP As Double = 116
+
+    ' 追加依頼ボタンはタイプ欄のさらに下
+    Const ADD_BTN_TOP As Double = 154
+    Const ADD_BTN_H As Double = 26
 
     Set fra = AddFrame(designer, "fraSection" & idx, "", _
                        leftX, topY, areaW, areaH, backColor)
@@ -205,13 +214,14 @@ Private Sub BuildRequestSection(ByVal designer As Object, _
     innerLeft = 18
     gapX = 10
 
-    w1 = 165
-    w2 = 165
-    w3 = 165
-    w4 = 165
-    w5 = 165
-    w6 = 165
-    w7 = 135
+    ' 横幅を少し詰め、24インチで見やすい幅に調整
+    w1 = 145     ' 組織
+    w2 = 145     ' CA名
+    w3 = 145     ' 代理CA組織
+    w4 = 145     ' 代理CA名
+    w5 = 155     ' メールメモ
+    w6 = 155     ' 処理日時
+    w7 = 125     ' 期日
 
     proxyX = innerLeft + _
              (w1 + gapX) + _
@@ -222,8 +232,17 @@ Private Sub BuildRequestSection(ByVal designer As Object, _
     processedX = mailMemoX + w5 + gapX
     dueDateX = processedX + w6 + gapX
 
+    ' 右端はオプションのみ。
+    ' 必要最小限の幅にして、右側の空きスペースをなくす。
     rightLeft = dueDateX + w7 + gapX
     rightW = areaW - rightLeft - 20
+
+    ' タイプ欄はメールメモ～期日までを横断
+    typeW = w5 + gapX + w6 + gapX + w7
+
+    ' 追加ボタンはタイプ欄の右端に揃える
+    addBtnW = 180
+    addBtnX = mailMemoX + typeW - addBtnW
 
     AddLabel fra, "lblOrg" & idx, "組織", _
              innerLeft, LABEL_TOP, w1, 16, 9, True, False, CLR_MUTED
@@ -248,13 +267,10 @@ Private Sub BuildRequestSection(ByVal designer As Object, _
              dueDateX, LABEL_TOP, w7, 16, 9, True, False, CLR_MUTED
 
     AddLabel fra, "lblOption" & idx, "オプション", _
-             rightLeft, LABEL_TOP, rightW * 0.42, 16, _
+             rightLeft, LABEL_TOP, rightW, 16, _
              9, True, False, CLR_MUTED
 
-    AddLabel fra, "lblType" & idx, "タイプ", _
-             rightLeft + rightW * 0.46, LABEL_TOP, _
-             rightW * 0.5, 16, 9, True, False, CLR_MUTED
-
+    ' 1段目
     AddTextBox fra, "txtOrg" & idx, _
                innerLeft, ROW1_TOP, w1, FIELD_H
 
@@ -277,29 +293,47 @@ Private Sub BuildRequestSection(ByVal designer As Object, _
     AddTextBox fra, "txtDueDate" & idx, _
                dueDateX, ROW1_TOP, w7, FIELD_H
 
+    ' 代理CA名 2段目・3段目
     AddTextBox fra, "txtProxyCA" & idx & "_2", _
                proxyX, ROW2_TOP, w4, FIELD_H
 
     AddTextBox fra, "txtProxyCA" & idx & "_3", _
                proxyX, ROW3_TOP, w4, FIELD_H
 
-    AddOptionPanel fra, idx, _
-                   rightLeft, ROW1_TOP, rightW * 0.42, 58
+    ' タイプ：長文対応の横長プルダウン
+    AddLabel fra, "lblType" & idx, "タイプ", _
+             mailMemoX, TYPE_LABEL_TOP, typeW, 16, _
+             9, True, False, CLR_MUTED
 
     AddComboBox fra, "cmbType" & idx, _
-                rightLeft + rightW * 0.46, ROW1_TOP, _
-                rightW * 0.5, FIELD_H
+                mailMemoX, TYPE_ROW_TOP, typeW, FIELD_H
+
+    ' オプションは右端
+    AddOptionPanel fra, idx, _
+                   rightLeft, ROW1_TOP, rightW, 58
+
+    ' 追加依頼ボタンはタイプの下
+    If idx = 1 Then
+        AddCommandButton fra, "cmdAdd2", "2件目を入力", _
+                         addBtnX, ADD_BTN_TOP, addBtnW, ADD_BTN_H, False
+    ElseIf idx = 2 Then
+        AddCommandButton fra, "cmdAdd3", "3件目を入力", _
+                         addBtnX, ADD_BTN_TOP, addBtnW, ADD_BTN_H, False
+    End If
+
 End Sub
 
 Private Sub AddOptionPanel(ByVal parent As Object, ByVal idx As Long, _
                            ByVal leftX As Double, ByVal topY As Double, _
                            ByVal panelW As Double, ByVal panelH As Double)
 
-    Dim pan As Object
-    Set pan = AddFrame(parent, "fraOption" & idx, "", leftX, topY, panelW, panelH, CLR_WHITE)
+    ' 囲み枠を作らず、チェックボックスを直接配置
+    AddCheckBox parent, "chkShort" & idx, "時短", _
+                leftX + 8, topY + 5, panelW - 16, 18
 
-    AddCheckBox pan, "chkShort" & idx, "時短", 10, 8, panelW - 20, 18
-    AddCheckBox pan, "chkUrgent" & idx, "至急", 10, 30, panelW - 20, 18
+    AddCheckBox parent, "chkUrgent" & idx, "至急", _
+                leftX + 8, topY + 29, panelW - 16, 18
+
 End Sub
 
 Private Function AddFrame(ByVal parent As Object, ByVal ctlName As String, ByVal captionText As String, _
@@ -348,24 +382,30 @@ End Sub
 Private Sub AddSectionTitle(ByVal parent As Object, ByVal ctlName As String, ByVal captionText As String, _
                             ByVal leftX As Double, ByVal topY As Double, _
                             ByVal ctlW As Double, ByVal ctlH As Double)
+
     Dim ctl As Object
     Set ctl = parent.Controls.Add("Forms.Label.1", ctlName, True)
+
     With ctl
-        .Caption = " " & captionText & " "
+        .Caption = captionText
         .Left = S(leftX)
         .Top = S(topY)
         .Width = S(ctlW)
         .Height = S(ctlH)
-        .BackStyle = 1
-        .BackColor = RGB(255, 255, 255)
-        .BorderStyle = fmBorderStyleSingle
+
+        ' 囲み・背景なし
+        .BackStyle = 0
+        .BorderStyle = 0
+
         .ForeColor = RGB(125, 78, 100)
+
         With .Font
             .Name = "Meiryo UI"
-            .Size = 10
+            .Size = 11
             .Bold = True
         End With
     End With
+
 End Sub
 
 Private Function AddLabel(ByVal parent As Object, _
@@ -484,6 +524,10 @@ Private Function AddCommandButton(ByVal parent As Object, ByVal ctlName As Strin
         If primaryButton Then
             .BackColor = CLR_BUTTON
             .ForeColor = CLR_BUTTON_TEXT
+        Else
+            ' 追加依頼ボタンは淡い色で控えめに
+            .BackColor = RGB(250, 243, 248)
+            .ForeColor = RGB(125, 78, 100)
         End If
         With .Font
             .Name = "Meiryo UI"
@@ -502,16 +546,12 @@ Private Sub AddCodeStub(ByVal vbComp As Object)
 
     Set cm = vbComp.CodeModule
 
-    ' VBAは1つの文で使える行継続文字（ _ ）の数に上限があるため、
-    ' フォーム内コードを複数回に分けて連結する。
-
     src = "Option Explicit" & vbCrLf & vbCrLf
 
     src = src & _
         "Private Sub UserForm_Initialize()" & vbCrLf & _
         "    Dim i As Long" & vbCrLf & vbCrLf & _
-        "    ' 拠点リスト" & vbCrLf & _
-        "    With Me.Controls(""cmbRequestBase"")" & vbCrLf & _
+        "    With Me.Controls(""fraFooter"").Controls(""cmbRequestBase"")" & vbCrLf & _
         "        .Clear" & vbCrLf & _
         "        .AddItem ""呉服""" & vbCrLf & _
         "        .AddItem ""札幌""" & vbCrLf & _
@@ -520,11 +560,9 @@ Private Sub AddCodeStub(ByVal vbComp As Object)
         "    End With" & vbCrLf & vbCrLf
 
     src = src & _
-        "    ' 依頼者をWindowsアカウントから自動取得" & vbCrLf & _
-        "    Me.Controls(""lblhdrRequesterValue"").Caption = "" "" & GetWindowsDisplayName()" & vbCrLf & vbCrLf & _
-        "    ' タイプ候補" & vbCrLf & _
+        "    Me.Controls(""fraFooter"").Controls(""lblRequesterValue"").Caption = "" "" & GetWindowsDisplayName()" & vbCrLf & vbCrLf & _
         "    For i = 1 To 3" & vbCrLf & _
-        "        With Me.Controls(""cmbType"" & i)" & vbCrLf & _
+        "        With Me.Controls(""fraSection"" & i).Controls(""cmbType"" & i)" & vbCrLf & _
         "            .Clear" & vbCrLf & _
         "            .AddItem """"" & vbCrLf & _
         "            .AddItem ""通常""" & vbCrLf & _
@@ -532,7 +570,42 @@ Private Sub AddCodeStub(ByVal vbComp As Object)
         "            .AddItem ""代理対応""" & vbCrLf & _
         "            .AddItem ""その他""" & vbCrLf & _
         "        End With" & vbCrLf & _
-        "    Next i" & vbCrLf & _
+        "    Next i" & vbCrLf & vbCrLf
+
+    src = src & _
+        "    Me.Controls(""fraSection2"").Visible = False" & vbCrLf & _
+        "    Me.Controls(""fraSection3"").Visible = False" & vbCrLf & _
+        "    Me.Controls(""fraSection1"").Controls(""cmdAdd2"").Visible = True" & vbCrLf & _
+        "    Me.Controls(""fraSection2"").Controls(""cmdAdd3"").Visible = True" & vbCrLf & _
+        "    PositionFooter 1" & vbCrLf & _
+        "End Sub" & vbCrLf & vbCrLf
+
+    src = src & _
+        "Private Sub cmdAdd2_Click()" & vbCrLf & _
+        "    Me.Controls(""fraSection2"").Visible = True" & vbCrLf & _
+        "    Me.Controls(""fraSection1"").Controls(""cmdAdd2"").Visible = False" & vbCrLf & _
+        "    PositionFooter 2" & vbCrLf & _
+        "    Me.Repaint" & vbCrLf & _
+        "End Sub" & vbCrLf & vbCrLf & _
+        "Private Sub cmdAdd3_Click()" & vbCrLf & _
+        "    Me.Controls(""fraSection3"").Visible = True" & vbCrLf & _
+        "    Me.Controls(""fraSection2"").Controls(""cmdAdd3"").Visible = False" & vbCrLf & _
+        "    PositionFooter 3" & vbCrLf & _
+        "    Me.Repaint" & vbCrLf & _
+        "End Sub" & vbCrLf & vbCrLf
+
+    src = src & _
+        "Private Sub PositionFooter(ByVal visibleCount As Long)" & vbCrLf & _
+        "    Dim lastFrame As Object" & vbCrLf & _
+        "    Dim footerTop As Single" & vbCrLf & vbCrLf & _
+        "    Select Case visibleCount" & vbCrLf & _
+        "        Case 1: Set lastFrame = Me.Controls(""fraSection1"")" & vbCrLf & _
+        "        Case 2: Set lastFrame = Me.Controls(""fraSection2"")" & vbCrLf & _
+        "        Case Else: Set lastFrame = Me.Controls(""fraSection3"")" & vbCrLf & _
+        "    End Select" & vbCrLf & _
+        "    footerTop = lastFrame.Top + lastFrame.Height + 18" & vbCrLf & _
+        "    Me.Controls(""fraFooter"").Top = footerTop" & vbCrLf & _
+        "    Me.Height = footerTop + Me.Controls(""fraFooter"").Height + 34" & vbCrLf & _
         "End Sub" & vbCrLf & vbCrLf
 
     src = src & _
@@ -542,7 +615,7 @@ Private Sub AddCodeStub(ByVal vbComp As Object)
         "    Dim objUser As Object" & vbCrLf & vbCrLf & _
         "    On Error GoTo Fallback" & vbCrLf & _
         "    userName = Environ$(""USERNAME"")" & vbCrLf & _
-        "    domainName = Environ$(""USERDOMAIN"")" & vbCrLf & vbCrLf & _
+        "    domainName = Environ$(""USERDOMAIN"")" & vbCrLf & _
         "    If Len(domainName) > 0 And Len(userName) > 0 Then" & vbCrLf & _
         "        Set objUser = GetObject(""WinNT://"" & domainName & ""/"" & userName & "",user"")" & vbCrLf & _
         "        If Len(Trim$(CStr(objUser.FullName))) > 0 Then" & vbCrLf & _
@@ -557,23 +630,25 @@ Private Sub AddCodeStub(ByVal vbComp As Object)
         "    GetWindowsDisplayName = userName" & vbCrLf & _
         "End Function" & vbCrLf & vbCrLf & _
         "Private Sub cmdSend_Click()" & vbCrLf & _
-        "    If Me.Controls(""cmbRequestBase"").ListIndex < 0 Then" & vbCrLf & _
+        "    If Me.Controls(""fraFooter"").Controls(""cmbRequestBase"").ListIndex < 0 Then" & vbCrLf & _
         "        MsgBox ""拠点を選択してください。"", vbExclamation" & vbCrLf & _
-        "        Me.Controls(""cmbRequestBase"").SetFocus" & vbCrLf & _
+        "        Me.Controls(""fraFooter"").Controls(""cmbRequestBase"").SetFocus" & vbCrLf & _
         "        Exit Sub" & vbCrLf & _
-        "    End If" & vbCrLf & vbCrLf & _
+        "    End If" & vbCrLf & _
         "    MsgBox ""送信処理は未実装です。ここに処理を書いてください。"", vbInformation" & vbCrLf & _
         "End Sub" & vbCrLf
 
     cm.AddFromString src
+
 End Sub
 
 Public Sub SetRequestHeader(ByVal frm As Object, _
                             ByVal requestBase As String)
 
     On Error Resume Next
-    frm.Controls("cmbRequestBase").Value = requestBase
+    frm.Controls("fraFooter").Controls("cmbRequestBase").Value = requestBase
     On Error GoTo 0
+
 End Sub
 
 Private Function S(ByVal v As Double) As Double
