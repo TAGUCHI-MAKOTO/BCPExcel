@@ -1,0 +1,275 @@
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    background: #faf6fb;
+    font-family: "Meiryo UI", "Yu Gothic UI", Meiryo, sans-serif;
+    color: #333333;
+    font-size: 16px;
+}
+
+html, body {
+    overflow: hidden;
+}
+
+body {
+    transform-origin: top left;
+}
+
+#app {
+    width: 1680px;
+    margin: 14px auto 16px auto;
+}
+
+.request-card {
+    position: relative;
+    width: 100%;
+    margin-bottom: 14px;
+    border: 1px solid #d8d2d8;
+    border-radius: 7px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(70, 55, 68, 0.08);
+}
+
+.card1 { background: #fff1fa; }
+.card2 { background: #f4fbf3; }
+.card3 { background: #f0f6ff; }
+
+.accent {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 10px;
+    background: #a05d8b;
+}
+
+.card-inner {
+    padding: 16px 20px 18px 28px;
+}
+
+.section-title {
+    margin-bottom: 14px;
+    color: #7d4e64;
+    font-size: 21px;
+    font-weight: bold;
+}
+
+.main-row {
+    position: relative;
+    white-space: nowrap;
+}
+
+.main-row:after,
+.detail-top:after,
+#footerBar:after {
+    content: "";
+    display: block;
+    clear: both;
+}
+
+.field,
+.detail-zone,
+.option-zone {
+    float: left;
+}
+
+.field {
+    margin-right: 13px;
+}
+
+.field label,
+.option-zone > label:first-child,
+.type-area > label,
+.footer-field > label {
+    display: block;
+    margin-bottom: 6px;
+    color: #5e5e5e;
+    font-size: 15px;
+    font-weight: bold;
+}
+
+input[type="text"],
+select {
+    width: 100%;
+    height: 44px;
+    padding: 5px 10px;
+    border: 1px solid #bdb8bd;
+    border-radius: 4px;
+    background: #ffffff;
+    color: #2f2f2f;
+    font-family: "Meiryo UI", "Yu Gothic UI", Meiryo, sans-serif;
+    font-size: 17px;
+}
+
+input[type="text"]:focus,
+select:focus {
+    border: 2px solid #a05d8b;
+    outline: none;
+    padding: 4px 9px;
+}
+
+.org,
+.ca,
+.proxy-org,
+.proxy-ca {
+    width: 190px;
+}
+
+.stacked {
+    display: block;
+    margin-top: 12px;
+}
+
+.detail-zone {
+    width: 625px;
+}
+
+.detail-top {
+    width: 625px;
+}
+
+.mail,
+.processed {
+    width: 205px;
+}
+
+.due {
+    width: 165px;
+    margin-right: 0;
+}
+
+.type-area {
+    width: 601px;
+    margin-top: 13px;
+}
+
+.type-area label {
+    display: block;
+}
+
+.type-area select {
+    height: 46px;
+    font-size: 17px;
+}
+
+.add-row {
+    width: 601px;
+    padding-top: 12px;
+    text-align: right;
+}
+
+.option-zone {
+    width: 176px;
+    margin-left: 13px;
+}
+
+.checkline {
+    display: block;
+    margin: 10px 0 0 8px;
+    color: #333333;
+    font-size: 16px;
+    font-weight: normal;
+}
+
+.checkline input {
+    width: 20px;
+    height: 20px;
+    vertical-align: middle;
+    margin: 0 7px 0 0;
+}
+
+button {
+    font-family: "Meiryo UI", "Yu Gothic UI", Meiryo, sans-serif;
+    cursor: pointer;
+}
+
+.sub-button {
+    width: 225px;
+    height: 42px;
+    border: 1px solid #cdaec2;
+    border-radius: 5px;
+    background: #faf3f8;
+    color: #7d4e64;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.sub-button:hover {
+    background: #f3e4ee;
+}
+
+.hidden {
+    display: none;
+}
+
+#footerBar {
+    display: -ms-flexbox;
+    display: flex;
+    -ms-flex-align: end;
+    align-items: flex-end;
+    width: 100%;
+    min-height: 96px;
+    padding: 13px 18px 14px 22px;
+    border: 1px solid #d8d2d8;
+    border-radius: 7px;
+    background: #ffffff;
+    box-shadow: 0 2px 5px rgba(70, 55, 68, 0.08);
+}
+
+.footer-field {
+    margin-right: 28px;
+}
+
+.base-field {
+    width: 250px;
+}
+
+.requester-field {
+    width: 360px;
+}
+
+.requester-value {
+    height: 44px;
+    line-height: 44px;
+    padding: 0 12px;
+    border-radius: 4px;
+    background: #f4ecf7;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 17px;
+}
+
+.footer-grow {
+    -ms-flex: 1;
+    flex: 1;
+}
+
+#sendButton {
+    width: 185px;
+    height: 58px;
+    border: 0;
+    border-radius: 6px;
+    background: #b88fc2;
+    color: #ffffff;
+    font-size: 19px;
+    font-weight: bold;
+}
+
+#sendButton:hover {
+    background: #a97ab5;
+}
+
+#sendButton:disabled {
+    opacity: 0.65;
+    cursor: default;
+}
+
+.error-field {
+    border-color: #d64b4b !important;
+    background: #fff7f7 !important;
+}
