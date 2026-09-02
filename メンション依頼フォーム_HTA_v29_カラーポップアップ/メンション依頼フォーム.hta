@@ -291,5 +291,28 @@ End Function
     </div>
 
 </div>
+
+
+<div id="cancelModalOverlay" class="modal-overlay hidden">
+    <div id="cancelConfirmModal" class="validation-modal modal-request2 cancel-confirm-modal">
+        <div id="cancelModalTitle" class="modal-title">依頼の取り消し確認</div>
+        <div id="cancelModalMessage" class="modal-message"></div>
+        <div class="cancel-modal-actions">
+            <button type="button" id="cancelBackButton" class="cancel-modal-back" onclick="closeCancelConfirm();">戻る</button>
+            <button type="button" id="cancelDoButton" class="cancel-modal-do" onclick="confirmCancelRequest();">取り消す</button>
+        </div>
+    </div>
+</div>
+
+<div id="modalOverlay" class="modal-overlay hidden">
+    <div id="validationModal" class="validation-modal modal-neutral">
+        <div id="modalTitle" class="modal-title">入力確認</div>
+        <div id="modalMessage" class="modal-message"></div>
+        <div class="modal-actions">
+            <button type="button" id="modalOkButton" class="modal-ok" onclick="closeValidationModal();">OK</button>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>

@@ -1,4 +1,4 @@
-* {
+﻿* {
     box-sizing: border-box;
 }
 
@@ -96,8 +96,8 @@ body {
 input[type="text"],
 select {
     width: 100%;
-    height: 44px;
-    padding: 5px 10px;
+    height: 46px;
+    padding: 6px 10px;
     border: 1px solid #bdb8bd;
     border-radius: 4px;
     background: #ffffff;
@@ -110,14 +110,15 @@ input[type="text"]:focus,
 select:focus {
     border: 2px solid #a05d8b;
     outline: none;
-    padding: 4px 9px;
+    padding: 5px 9px;
 }
 
+/* V9比率をほぼそのまま拡大 */
 .org,
 .ca,
 .proxy-org,
 .proxy-ca {
-    width: 190px;
+    width: 192px;
 }
 
 .stacked {
@@ -135,16 +136,17 @@ select:focus {
 
 .mail,
 .processed {
-    width: 205px;
+    width: 208px;
 }
 
 .due {
-    width: 165px;
+    width: 183px;
     margin-right: 0;
 }
 
+/* V9と同じ：メールメモ～期日までを横断 */
 .type-area {
-    width: 601px;
+    width: 625px;
     margin-top: 13px;
 }
 
@@ -157,15 +159,18 @@ select:focus {
     font-size: 17px;
 }
 
+/* 追加ボタン：タイプ欄の右端に自然に揃える */
 .add-row {
-    width: 601px;
+    width: 625px;
     padding-top: 12px;
     text-align: right;
+    white-space: nowrap;
 }
 
+
 .option-zone {
-    width: 176px;
-    margin-left: 13px;
+    width: 172px;
+    margin-left: 10px;
 }
 
 .checkline {
@@ -189,8 +194,8 @@ button {
 }
 
 .sub-button {
-    width: 225px;
-    height: 42px;
+    width: 230px;
+    height: 44px;
     border: 1px solid #cdaec2;
     border-radius: 5px;
     background: #faf3f8;
@@ -207,6 +212,7 @@ button {
     display: none;
 }
 
+/* フッター：V9と同じ「拠点・依頼者・送信」1列 */
 #footerBar {
     display: -ms-flexbox;
     display: flex;
@@ -214,7 +220,7 @@ button {
     align-items: flex-end;
     width: 100%;
     min-height: 96px;
-    padding: 13px 18px 14px 22px;
+    padding: 13px 22px 14px 22px;
     border: 1px solid #d8d2d8;
     border-radius: 7px;
     background: #ffffff;
@@ -226,11 +232,11 @@ button {
 }
 
 .base-field {
-    width: 250px;
+    width: 260px;
 }
 
 .requester-field {
-    width: 360px;
+    width: 380px;
 }
 
 .requester-value {
@@ -251,8 +257,8 @@ button {
 }
 
 #sendButton {
-    width: 185px;
-    height: 58px;
+    width: 190px;
+    height: 60px;
     border: 0;
     border-radius: 6px;
     background: #b88fc2;
@@ -275,38 +281,155 @@ button {
     background: #fff7f7 !important;
 }
 
+
 /* =========================================================
-   依頼2・3：追加／取消アクション行 v20
+   入力エラー用カラーモーダル
    ========================================================= */
-.action-row {
-    position: relative;
-    width: 838px;
-    height: 58px;
-    padding-top: 12px;
+.modal-overlay {
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(40, 35, 40, 0.34);
+}
+
+.validation-modal {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 520px;
+    min-height: 190px;
+    margin-left: -260px;
+    margin-top: -95px;
+    border-radius: 10px;
+    border: 2px solid #b5adb5;
+    box-shadow: 0 8px 28px rgba(40, 30, 40, 0.30);
+    padding: 0 0 18px 0;
+    background: #ffffff;
+}
+
+.modal-title {
+    padding: 15px 20px;
+    font-size: 20px;
+    font-weight: bold;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+}
+
+.modal-message {
+    min-height: 76px;
+    padding: 22px 26px 14px 26px;
+    font-size: 17px;
+    line-height: 1.65;
+    white-space: pre-line;
+    color: #333333;
+}
+
+.modal-actions {
     text-align: center;
+    padding-top: 6px;
+}
+
+.modal-ok {
+    width: 150px;
+    height: 44px;
+    border: 0;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: bold;
+    color: #ffffff;
+}
+
+/* 依頼1：ピンク */
+.modal-request1 {
+    background: #fff1fa;
+    border-color: #a05d8b;
+}
+.modal-request1 .modal-title {
+    color: #7d4e64;
+    background: #f9ddec;
+}
+.modal-request1 .modal-ok {
+    background: #b88fc2;
+}
+
+/* 依頼2：グリーン */
+.modal-request2 {
+    background: #f4fbf3;
+    border-color: #7ea782;
+}
+.modal-request2 .modal-title {
+    color: #476a4a;
+    background: #def0dc;
+}
+.modal-request2 .modal-ok {
+    background: #78a27c;
+}
+
+/* 依頼3：ブルー */
+.modal-request3 {
+    background: #f0f6ff;
+    border-color: #7390bd;
+}
+.modal-request3 .modal-title {
+    color: #486487;
+    background: #dce8f8;
+}
+.modal-request3 .modal-ok {
+    background: #7390bd;
+}
+
+/* 拠点など共通エラー */
+.modal-neutral {
+    background: #ffffff;
+    border-color: #a05d8b;
+}
+.modal-neutral .modal-title {
+    color: #7d4e64;
+    background: #f4ecf7;
+}
+.modal-neutral .modal-ok {
+    background: #b88fc2;
+}
+
+
+/* =========================================================
+   依頼2・3：追加／取消アクション行 v25
+   ========================================================= */
+
+/*
+  操作エリア幅をタイプ欄と同じ625pxに固定。
+  ボタンは右寄せで並べ、最後のボタンの右端をタイプ欄右端に一致させる。
+  HTA/IE互換性を考慮し、flexではなく inline-block + text-align:right を使用。
+*/
+.action-row {
+    width: 625px;
+    padding-top: 12px;
+    text-align: right;
     white-space: nowrap;
 }
 
 .action-row .sub-button,
 .action-row .cancel-request-button {
-    position: static;
     display: inline-block;
     vertical-align: top;
 }
 
 .action-row .sub-button {
-    margin-right: 24px;
+    margin-right: 18px;
 }
 
 .cancel-request-button {
-    width: 225px;
-    height: 42px;
+    width: 230px;
+    height: 44px;
     border-radius: 5px;
     font-size: 16px;
     font-weight: bold;
     cursor: pointer;
 }
 
+/* 依頼2：グリーン系 */
 .card2 .cancel-request-button {
     border: 1px solid #9cbca0;
     background: #edf7ed;
@@ -317,6 +440,7 @@ button {
     background: #e2f1e2;
 }
 
+/* 依頼3：ブルー系 */
 .card3 .cancel-request-button {
     border: 1px solid #9fb4d3;
     background: #edf4ff;
@@ -327,7 +451,55 @@ button {
     background: #e2edfb;
 }
 
+/* 依頼3は取消ボタンだけを同じ右端ラインへ */
 .action-row-cancel-only {
+    width: 625px;
+    text-align: right;
+}
+
+
+/* =========================================================
+   取消確認ポップアップ
+   ========================================================= */
+.cancel-confirm-modal {
+    min-height: 210px;
+}
+
+.cancel-modal-actions {
     text-align: center;
-    padding-left: 249px;
+    padding: 8px 20px 0 20px;
+}
+
+.cancel-modal-actions button {
+    width: 150px;
+    height: 44px;
+    margin: 0 8px;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.cancel-modal-back {
+    border: 1px solid #aaa3aa;
+    background: #ffffff;
+    color: #5f585f;
+}
+
+.cancel-modal-back:hover {
+    background: #f4f1f4;
+}
+
+.cancel-modal-do {
+    border: 0;
+    color: #ffffff;
+}
+
+/* 依頼2確認：グリーン */
+#cancelConfirmModal.modal-request2 .cancel-modal-do {
+    background: #78a27c;
+}
+
+/* 依頼3確認：ブルー */
+#cancelConfirmModal.modal-request3 .cancel-modal-do {
+    background: #7390bd;
 }
