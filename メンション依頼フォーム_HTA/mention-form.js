@@ -80,6 +80,7 @@ function showRequest(no){
         visibleRequestCount=3;
     }
     resizeApp();
+
 }
 
 function resizeApp(){
@@ -160,17 +161,137 @@ function hasAnyInput(req){
 }
 
 function validateForm(){
+    var i;
+
     clearErrors();
+
     if(!val("requestBase")){
-        $("requestBase").className="error-field";
+        markError("requestBase");
         alert("拠点を選択してください");
-        $("requestBase").focus();
+        focusField("requestBase");
         return false;
     }
+
+    for(i=1;i<=visibleRequestCount;i++){
+
+        if(!val("mailMemo"+i)){
+            markError("mailMemo"+i);
+            alert("依頼"+i+"：メールメモを入力してください");
+            focusField("mailMemo"+i);
+            return false;
+        }
+
+        if(!val("processedAt"+i)){
+            markError("processedAt"+i);
+            alert("依頼"+i+"：処理日時を入力してください");
+            focusField("processedAt"+i);
+            return false;
+        }
+
+        if(!val("type"+i)){
+            markError("type"+i);
+            alert("依頼"+i+"：タイプを選択してください");
+            focusField("type"+i);
+            return false;
+        }
+
+        var normalOrg = trimValue("org"+i);
+        var normalCA = trimValue("ca"+i);
+        var proxyOrg = trimValue("proxyOrg"+i);
+        var proxyCA1 = trimValue("proxyCA"+i+"_1");
+
+        var normalAny = !!(normalOrg || normalCA);
+        var proxyAny = !!(proxyOrg || proxyCA1);
+
+        var normalComplete = !!(normalOrg && normalCA);
+        var proxyComplete = !!(proxyOrg && proxyCA1);
+
+        if(!normalAny && !proxyAny){
+            markError("org"+i);
+            markError("ca"+i);
+            markError("proxyOrg"+i);
+            markError("proxyCA"+i+"_1");
+
+            alert(
+                "依頼"+i+"：\n" +
+                "「組織＋CA名」または「代理CA組織＋代理CA名」を入力してください"
+            );
+            focusField("org"+i);
+            return false;
+        }
+
+        if(normalAny && !normalComplete && !proxyComplete){
+            if(!normalOrg){ markError("org"+i); }
+            if(!normalCA){ markError("ca"+i); }
+
+            alert("依頼"+i+"：「組織」と「CA名」はセットで入力してください");
+
+            if(!normalOrg){
+                focusField("org"+i);
+            }else{
+                focusField("ca"+i);
+            }
+            return false;
+        }
+
+        if(proxyAny && !proxyComplete && !normalComplete){
+            if(!proxyOrg){ markError("proxyOrg"+i); }
+            if(!proxyCA1){ markError("proxyCA"+i+"_1"); }
+
+            alert("依頼"+i+"：「代理CA組織」と「代理CA名」はセットで入力してください");
+
+            if(!proxyOrg){
+                focusField("proxyOrg"+i);
+            }else{
+                focusField("proxyCA"+i+"_1");
+            }
+            return false;
+        }
+    }
+
     return true;
 }
 
-function clearErrors(){ $("requestBase").className=""; }
+function clearErrors(){
+    var ids=[
+        "requestBase",
+        "org1","ca1","proxyOrg1","proxyCA1_1","mailMemo1","processedAt1","type1",
+        "org2","ca2","proxyOrg2","proxyCA2_1","mailMemo2","processedAt2","type2",
+        "org3","ca3","proxyOrg3","proxyCA3_1","mailMemo3","processedAt3","type3"
+    ];
+
+    var i,el;
+
+    for(i=0;i<ids.length;i++){
+        el=$(ids[i]);
+        if(el){
+            el.className=String(el.className||"")
+                .replace(/\berror-field\b/g,"")
+                .replace(/^\s+|\s+$/g,"");
+        }
+    }
+}
+
+function markError(id){
+    var el=$(id);
+    if(!el){ return; }
+
+    var cls=String(el.className||"");
+    if(cls.indexOf("error-field")<0){
+        el.className=(cls+" error-field").replace(/^\s+|\s+$/g,"");
+    }
+}
+
+function focusField(id){
+    try{
+        var el=$(id);
+        if(el){ el.focus(); }
+    }catch(err){}
+}
+
+function trimValue(id){
+    return val(id).replace(/^\s+|\s+$/g,"");
+}
 
 function sendRequest(){
     if(!validateForm()){ return; }
