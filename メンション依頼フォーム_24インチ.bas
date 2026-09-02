@@ -1,4 +1,4 @@
-Attribute VB_Name = "modMentionRequestForm24V2"
+Attribute VB_Name = "modMentionRequestForm24V3"
 Option Explicit
 
 '============================================================
@@ -42,7 +42,7 @@ Private Const CLR_FIELD_BG As Long = &HFFFFFF
 Private Const CLR_BUTTON As Long = &HB88FC2
 Private Const CLR_BUTTON_TEXT As Long = &HFFFFFF
 
-Public Sub BuildMentionRequestForm24V2()
+Public Sub BuildMentionRequestForm24V3()
 
     Dim vbProj As Object
     Dim vbComp As Object
@@ -102,7 +102,6 @@ Private Sub BuildFormLayout(ByVal designer As Object)
 
     marginX = 18
     contentW = 1550
-
     y = 22
     secGap = 24
 
@@ -120,7 +119,6 @@ Private Sub BuildFormLayout(ByVal designer As Object)
 
     AddCommandButton designer, "cmdSend", "送信", _
                      marginX + contentW - 170, y, 150, 42, True
-
 End Sub
 
 Private Sub BuildHeaderArea(ByVal designer As Object, _
@@ -147,7 +145,6 @@ Private Sub BuildHeaderArea(ByVal designer As Object, _
 
     BuildHeaderCard fra, "hdrRequester", "依頼者", _
                     18 + cardW + gapX, 7, cardW, 34
-
 End Sub
 
 Private Sub BuildHeaderCard(ByVal parent As Object, _
@@ -171,7 +168,6 @@ Private Sub BuildHeaderCard(ByVal parent As Object, _
         .Caption = " "
         .SpecialEffect = fmSpecialEffectFlat
     End With
-
 End Sub
 
 Private Sub BuildRequestSection(ByVal designer As Object, _
@@ -217,7 +213,11 @@ Private Sub BuildRequestSection(ByVal designer As Object, _
     w6 = 165
     w7 = 135
 
-    proxyX = innerLeft + (w1 + gapX) + (w2 + gapX) + (w3 + gapX)
+    proxyX = innerLeft + _
+             (w1 + gapX) + _
+             (w2 + gapX) + _
+             (w3 + gapX)
+
     mailMemoX = proxyX + w4 + gapX
     processedX = mailMemoX + w5 + gapX
     dueDateX = processedX + w6 + gapX
@@ -225,34 +225,70 @@ Private Sub BuildRequestSection(ByVal designer As Object, _
     rightLeft = dueDateX + w7 + gapX
     rightW = areaW - rightLeft - 20
 
-    AddLabel fra, "lblOrg" & idx, "組織", innerLeft, LABEL_TOP, w1, 16, 9, True, False, CLR_MUTED
-    AddLabel fra, "lblCA" & idx, "CA名", innerLeft + w1 + gapX, LABEL_TOP, w2, 16, 9, True, False, CLR_MUTED
-    AddLabel fra, "lblProxyOrg" & idx, "代理CA組織", innerLeft + (w1 + gapX) + (w2 + gapX), LABEL_TOP, w3, 16, 9, True, False, CLR_MUTED
-    AddLabel fra, "lblProxyCA" & idx, "代理CA名", proxyX, LABEL_TOP, w4, 16, 9, True, False, CLR_MUTED
-    AddLabel fra, "lblMailMemo" & idx, "メールメモ", mailMemoX, LABEL_TOP, w5, 16, 9, True, False, CLR_MUTED
-    AddLabel fra, "lblProcessedAt" & idx, "処理日時", processedX, LABEL_TOP, w6, 16, 9, True, False, CLR_MUTED
-    AddLabel fra, "lblDueDate" & idx, "期日", dueDateX, LABEL_TOP, w7, 16, 9, True, False, CLR_MUTED
+    AddLabel fra, "lblOrg" & idx, "組織", _
+             innerLeft, LABEL_TOP, w1, 16, 9, True, False, CLR_MUTED
+
+    AddLabel fra, "lblCA" & idx, "CA名", _
+             innerLeft + w1 + gapX, LABEL_TOP, w2, 16, 9, True, False, CLR_MUTED
+
+    AddLabel fra, "lblProxyOrg" & idx, "代理CA組織", _
+             innerLeft + (w1 + gapX) + (w2 + gapX), _
+             LABEL_TOP, w3, 16, 9, True, False, CLR_MUTED
+
+    AddLabel fra, "lblProxyCA" & idx, "代理CA名", _
+             proxyX, LABEL_TOP, w4, 16, 9, True, False, CLR_MUTED
+
+    AddLabel fra, "lblMailMemo" & idx, "メールメモ", _
+             mailMemoX, LABEL_TOP, w5, 16, 9, True, False, CLR_MUTED
+
+    AddLabel fra, "lblProcessedAt" & idx, "処理日時", _
+             processedX, LABEL_TOP, w6, 16, 9, True, False, CLR_MUTED
+
+    AddLabel fra, "lblDueDate" & idx, "期日", _
+             dueDateX, LABEL_TOP, w7, 16, 9, True, False, CLR_MUTED
 
     AddLabel fra, "lblOption" & idx, "オプション", _
-             rightLeft, LABEL_TOP, rightW * 0.42, 16, 9, True, False, CLR_MUTED
+             rightLeft, LABEL_TOP, rightW * 0.42, 16, _
+             9, True, False, CLR_MUTED
+
     AddLabel fra, "lblType" & idx, "タイプ", _
-             rightLeft + rightW * 0.46, LABEL_TOP, rightW * 0.5, 16, 9, True, False, CLR_MUTED
+             rightLeft + rightW * 0.46, LABEL_TOP, _
+             rightW * 0.5, 16, 9, True, False, CLR_MUTED
 
-    AddTextBox fra, "txtOrg" & idx, innerLeft, ROW1_TOP, w1, FIELD_H
-    AddTextBox fra, "txtCA" & idx, innerLeft + w1 + gapX, ROW1_TOP, w2, FIELD_H
-    AddTextBox fra, "txtProxyOrg" & idx, innerLeft + (w1 + gapX) + (w2 + gapX), ROW1_TOP, w3, FIELD_H
-    AddTextBox fra, "txtProxyCA" & idx & "_1", proxyX, ROW1_TOP, w4, FIELD_H
-    AddTextBox fra, "txtMailMemo" & idx, mailMemoX, ROW1_TOP, w5, FIELD_H
-    AddTextBox fra, "txtProcessedAt" & idx, processedX, ROW1_TOP, w6, FIELD_H
-    AddTextBox fra, "txtDueDate" & idx, dueDateX, ROW1_TOP, w7, FIELD_H
+    AddTextBox fra, "txtOrg" & idx, _
+               innerLeft, ROW1_TOP, w1, FIELD_H
 
-    AddTextBox fra, "txtProxyCA" & idx & "_2", proxyX, ROW2_TOP, w4, FIELD_H
-    AddTextBox fra, "txtProxyCA" & idx & "_3", proxyX, ROW3_TOP, w4, FIELD_H
+    AddTextBox fra, "txtCA" & idx, _
+               innerLeft + w1 + gapX, ROW1_TOP, w2, FIELD_H
 
-    AddOptionPanel fra, idx, rightLeft, ROW1_TOP, rightW * 0.42, 58
+    AddTextBox fra, "txtProxyOrg" & idx, _
+               innerLeft + (w1 + gapX) + (w2 + gapX), _
+               ROW1_TOP, w3, FIELD_H
+
+    AddTextBox fra, "txtProxyCA" & idx & "_1", _
+               proxyX, ROW1_TOP, w4, FIELD_H
+
+    AddTextBox fra, "txtMailMemo" & idx, _
+               mailMemoX, ROW1_TOP, w5, FIELD_H
+
+    AddTextBox fra, "txtProcessedAt" & idx, _
+               processedX, ROW1_TOP, w6, FIELD_H
+
+    AddTextBox fra, "txtDueDate" & idx, _
+               dueDateX, ROW1_TOP, w7, FIELD_H
+
+    AddTextBox fra, "txtProxyCA" & idx & "_2", _
+               proxyX, ROW2_TOP, w4, FIELD_H
+
+    AddTextBox fra, "txtProxyCA" & idx & "_3", _
+               proxyX, ROW3_TOP, w4, FIELD_H
+
+    AddOptionPanel fra, idx, _
+                   rightLeft, ROW1_TOP, rightW * 0.42, 58
+
     AddComboBox fra, "cmbType" & idx, _
-                rightLeft + rightW * 0.46, ROW1_TOP, rightW * 0.5, FIELD_H
-
+                rightLeft + rightW * 0.46, ROW1_TOP, _
+                rightW * 0.5, FIELD_H
 End Sub
 
 Private Sub AddOptionPanel(ByVal parent As Object, ByVal idx As Long, _
@@ -466,18 +502,27 @@ Private Sub AddCodeStub(ByVal vbComp As Object)
 
     Set cm = vbComp.CodeModule
 
-    src = _
-        "Option Explicit" & vbCrLf & vbCrLf & _
+    ' VBAは1つの文で使える行継続文字（ _ ）の数に上限があるため、
+    ' フォーム内コードを複数回に分けて連結する。
+
+    src = "Option Explicit" & vbCrLf & vbCrLf
+
+    src = src & _
         "Private Sub UserForm_Initialize()" & vbCrLf & _
         "    Dim i As Long" & vbCrLf & vbCrLf & _
+        "    ' 拠点リスト" & vbCrLf & _
         "    With Me.Controls(""cmbRequestBase"")" & vbCrLf & _
         "        .Clear" & vbCrLf & _
         "        .AddItem ""呉服""" & vbCrLf & _
         "        .AddItem ""札幌""" & vbCrLf & _
         "        .AddItem ""新潟""" & vbCrLf & _
         "        .ListIndex = -1" & vbCrLf & _
-        "    End With" & vbCrLf & vbCrLf & _
+        "    End With" & vbCrLf & vbCrLf
+
+    src = src & _
+        "    ' 依頼者をWindowsアカウントから自動取得" & vbCrLf & _
         "    Me.Controls(""lblhdrRequesterValue"").Caption = "" "" & GetWindowsDisplayName()" & vbCrLf & vbCrLf & _
+        "    ' タイプ候補" & vbCrLf & _
         "    For i = 1 To 3" & vbCrLf & _
         "        With Me.Controls(""cmbType"" & i)" & vbCrLf & _
         "            .Clear" & vbCrLf & _
@@ -488,12 +533,14 @@ Private Sub AddCodeStub(ByVal vbComp As Object)
         "            .AddItem ""その他""" & vbCrLf & _
         "        End With" & vbCrLf & _
         "    Next i" & vbCrLf & _
-        "End Sub" & vbCrLf & vbCrLf & _
+        "End Sub" & vbCrLf & vbCrLf
+
+    src = src & _
         "Private Function GetWindowsDisplayName() As String" & vbCrLf & _
         "    Dim userName As String" & vbCrLf & _
         "    Dim domainName As String" & vbCrLf & _
         "    Dim objUser As Object" & vbCrLf & vbCrLf & _
-        "    On Error GoTo Fallback" & vbCrLf & vbCrLf & _
+        "    On Error GoTo Fallback" & vbCrLf & _
         "    userName = Environ$(""USERNAME"")" & vbCrLf & _
         "    domainName = Environ$(""USERDOMAIN"")" & vbCrLf & vbCrLf & _
         "    If Len(domainName) > 0 And Len(userName) > 0 Then" & vbCrLf & _
@@ -502,7 +549,9 @@ Private Sub AddCodeStub(ByVal vbComp As Object)
         "            GetWindowsDisplayName = CStr(objUser.FullName)" & vbCrLf & _
         "            Exit Function" & vbCrLf & _
         "        End If" & vbCrLf & _
-        "    End If" & vbCrLf & vbCrLf & _
+        "    End If" & vbCrLf
+
+    src = src & _
         "Fallback:" & vbCrLf & _
         "    If Len(userName) = 0 Then userName = Environ$(""USERNAME"")" & vbCrLf & _
         "    GetWindowsDisplayName = userName" & vbCrLf & _
@@ -517,7 +566,6 @@ Private Sub AddCodeStub(ByVal vbComp As Object)
         "End Sub" & vbCrLf
 
     cm.AddFromString src
-
 End Sub
 
 Public Sub SetRequestHeader(ByVal frm As Object, _
@@ -526,7 +574,6 @@ Public Sub SetRequestHeader(ByVal frm As Object, _
     On Error Resume Next
     frm.Controls("cmbRequestBase").Value = requestBase
     On Error GoTo 0
-
 End Sub
 
 Private Function S(ByVal v As Double) As Double
