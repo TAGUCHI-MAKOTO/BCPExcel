@@ -1,0 +1,1 @@
+Temporary staging files are being cleaned after v8 latest-folder update.
