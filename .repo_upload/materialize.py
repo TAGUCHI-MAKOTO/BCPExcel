@@ -3,12 +3,12 @@ import base64, hashlib, shutil, zipfile
 
 root = Path('.')
 staging = root / '.repo_upload'
-parts = sorted(staging.glob('mention_latest_v13.b85.part*'))
+parts = sorted(staging.glob('mention_latest_v13.b64.part*'))
 if len(parts) != 6:
     raise SystemExit(f'expected 6 upload parts, found {len(parts)}')
 
 encoded = ''.join(p.read_text(encoding='utf-8') for p in parts)
-archive_bytes = base64.b85decode(encoded.encode('ascii'))
+archive_bytes = base64.b64decode(encoded.encode('ascii'))
 digest = hashlib.sha256(archive_bytes).hexdigest()
 expected = 'b76aefce3bd0680e84c8891e8f2e4e00701e809e9e6d19b41d2a553188d2cd3d'
 if digest != expected:
@@ -107,7 +107,6 @@ readme.write_text(readme_text, encoding='utf-8-sig')
 
 archive.unlink(missing_ok=True)
 
-# materialize完了後に一時アップロード素材を削除
 for p in staging.glob('*'):
     if p.is_file():
         p.unlink()
