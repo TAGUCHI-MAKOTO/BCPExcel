@@ -8,7 +8,7 @@
 
     [int]$RetryMaxMilliseconds = 1250,
 
-    [int]$WaitNoticeSeconds = 60
+    [int]$MaxRetrySeconds = 300
 )
 
 $ErrorActionPreference = "Stop"
@@ -201,13 +201,12 @@ function Acquire-Lock {
     param([string]$LockPath)
 
     $waitStarted = Get-Date
-    $noticeSent = $false
+    $attemptLimitSeconds = [Math]::Min(5,[Math]::Max(1,$MaxRetrySeconds))
 
     while ($true) {
         try {
             # OpenOrCreate + FileShare.None：
             # lockファイルが残っていても、前プロセスのhandleが解放されていれば取得可能。
-            # CreateNew方式のようなstale lock問題を避ける。
             return [System.IO.File]::Open(
                 $LockPath,
                 [System.IO.FileMode]::OpenOrCreate,
@@ -216,15 +215,8 @@ function Acquire-Lock {
             )
         }
         catch {
-            if (-not $noticeSent -and
-                ((Get-Date) - $waitStarted).TotalSeconds -ge $WaitNoticeSeconds) {
-
-                Show-Balloon `
-                    -Title "メンション依頼｜送信待機中" `
-                    -Text "CSVが使用中、または共有先へ接続できません。依頼データはPCに退避済みで、自動再送を継続しています。" `
-                    -Kind "Warning"
-
-                $noticeSent = $true
+            if (((Get-Date) - $waitStarted).TotalSeconds -ge $attemptLimitSeconds) {
+                throw "CSVの排他ロックを取得できませんでした。"
             }
 
             Start-Sleep -Milliseconds (Get-RetryDelay)
@@ -460,11 +452,12 @@ $pending = $null
 try {
     $pending = Read-Pending $PendingPath
 
-    # V3はPending自身に送信先を固定。旧V1/V2だけ引数のCsvFolderをfallbackに使う。
-    $effectiveCsvFolder = [string]$pending.CsvFolder
+    # v9以降はアプリ側の固定CSV保存先を優先。
+    # 旧Pending互換のため、引数が空の場合のみPending内の保存先をfallbackに使う。
+    $effectiveCsvFolder = [string]$CsvFolder
 
     if ([string]::IsNullOrWhiteSpace($effectiveCsvFolder)) {
-        $effectiveCsvFolder = [string]$CsvFolder
+        $effectiveCsvFolder = [string]$pending.CsvFolder
     }
 
     if ([string]::IsNullOrWhiteSpace($effectiveCsvFolder)) {
@@ -478,10 +471,10 @@ try {
         -Message $effectiveCsvFolder
 
     $startedAt = Get-Date
-    $retryNoticeSent = $false
     $writeResult = ""
 
-    # 共有先一時断・Excel使用中等でも、成功するまでバックグラウンド再送
+    # 共有先一時断・Excel使用中等では一定時間バックグラウンド自動再送。
+    # 上限を超えた場合はPendingを残したまま通知して終了する。
     while ($true) {
         try {
             $writeResult = Write-CsvWithLock `
@@ -494,22 +487,29 @@ try {
             break
         }
         catch {
-            if (-not $retryNoticeSent -and
-                ((Get-Date) - $startedAt).TotalSeconds -ge $WaitNoticeSeconds) {
-
-                Show-Balloon `
-                    -Title "メンション依頼｜自動再送中" `
-                    -Text "共有CSVへ書き込めないため再送しています。依頼データはPCに退避済みです。" `
-                    -Kind "Warning"
-
-                $retryNoticeSent = $true
-            }
+            $lastError = $_.Exception.Message
+            $elapsedSeconds = ((Get-Date) - $startedAt).TotalSeconds
 
             Write-LocalLog `
                 -Status "RETRY" `
                 -RequestId $pending.RequestId `
                 -BaseName $pending.BaseName `
-                -Message $_.Exception.Message
+                -Message $lastError
+
+            if ($elapsedSeconds -ge $MaxRetrySeconds) {
+                Write-LocalLog `
+                    -Status "RETRY_EXHAUSTED" `
+                    -RequestId $pending.RequestId `
+                    -BaseName $pending.BaseName `
+                    -Message $lastError
+
+                Show-Balloon `
+                    -Title "メンション依頼｜未送信" `
+                    -Text "共有CSVへ書き込めませんでした。未送信データはデスクトップに保持しています。フォームを開いて「未送信を再送」を押してください。" `
+                    -Kind "Error"
+
+                exit 2
+            }
 
             Start-Sleep -Milliseconds (Get-RetryDelay)
         }
