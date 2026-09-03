@@ -134,8 +134,14 @@ README.txt
 mention-form.config.ini
 mention-form.css
 mention-form.js
+mention-form-v8-overrides.js
 mention-request-worker.ps1
 メンション依頼フォーム.hta
+
+※ レポジトリの最新版では、過去のmention-form.js履歴を安全に維持しながら
+   v4～v8の承認済み差分を確実に反映するため、
+   mention-form-v8-overrides.jsをHTAから追加読込しています。
+   このファイルも同じフォルダに置いて使用してください。
 
 
 [v2 設定パス判定修正]
