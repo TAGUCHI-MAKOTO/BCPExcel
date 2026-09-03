@@ -120,10 +120,6 @@ End Function
                         <label>タイプ</label>
                         <select id="type1"></select>
                     </div>
-                    
-        <div class="add-row">
-            <button type="button" class="sub-button" id="btnAdd2" onclick="showRequest(2);">2件目を入力</button>
-        </div>
                 </div>
 
                 <div class="option-zone">
@@ -131,6 +127,11 @@ End Function
                     <label class="checkline"><input type="checkbox" id="short1"> 時短</label>
                     <label class="checkline"><input type="checkbox" id="urgent1"> 至急</label>
                 </div>
+            </div>
+
+            <div class="card-action-row">
+                <button type="button" class="sub-button" id="btnAdd2" onclick="showRequest(2);">2件目を入力</button>
+                <button type="button" class="sub-button clear-request-button" onclick="clearRequest(1);">クリア</button>
             </div>
         </div>
     </div>
@@ -145,6 +146,10 @@ End Function
                 <div class="field org">
                     <label>組織</label>
                     <input type="text" id="org2">
+                    <label class="checkline same-ca-inline">
+                        <input type="checkbox" id="sameCA2" onclick="toggleSameCA(2);">
+                        <span id="sameCALabel2">依頼1と同一CA</span>
+                    </label>
                 </div>
 
                 <div class="field ca">
@@ -186,11 +191,6 @@ End Function
                         <label>タイプ</label>
                         <select id="type2"></select>
                     </div>
-                    
-        <div class="action-row action-row-with-cancel">
-            <button type="button" class="sub-button" id="btnAdd3" onclick="showRequest(3);">3件目を入力</button>
-            <button type="button" class="cancel-request-button" onclick="requestCancel(2);">× この依頼を取り消す</button>
-        </div>
                 </div>
 
                 <div class="option-zone">
@@ -198,6 +198,12 @@ End Function
                     <label class="checkline"><input type="checkbox" id="short2"> 時短</label>
                     <label class="checkline"><input type="checkbox" id="urgent2"> 至急</label>
                 </div>
+            </div>
+
+            <div class="card-action-row">
+                <button type="button" class="sub-button" id="btnAdd3" onclick="showRequest(3);">3件目を入力</button>
+                <button type="button" class="cancel-request-button" onclick="requestCancel(2);">× この依頼を取り消す</button>
+                <button type="button" class="sub-button clear-request-button" onclick="clearRequest(2);">クリア</button>
             </div>
         </div>
     </div>
@@ -212,6 +218,10 @@ End Function
                 <div class="field org">
                     <label>組織</label>
                     <input type="text" id="org3">
+                    <label class="checkline same-ca-inline">
+                        <input type="checkbox" id="sameCA3" onclick="toggleSameCA(3);">
+                        <span id="sameCALabel3">依頼2と同一CA</span>
+                    </label>
                 </div>
 
                 <div class="field ca">
@@ -253,10 +263,6 @@ End Function
                         <label>タイプ</label>
                         <select id="type3"></select>
                     </div>
-
-                    <div class="action-row action-row-cancel-only">
-                        <button type="button" class="cancel-request-button" onclick="requestCancel(3);">× この依頼を取り消す</button>
-                    </div>
                     
                 </div>
 
@@ -265,6 +271,11 @@ End Function
                     <label class="checkline"><input type="checkbox" id="short3"> 時短</label>
                     <label class="checkline"><input type="checkbox" id="urgent3"> 至急</label>
                 </div>
+            </div>
+
+            <div class="card-action-row">
+                <button type="button" class="cancel-request-button" onclick="requestCancel(3);">× この依頼を取り消す</button>
+                <button type="button" class="sub-button clear-request-button" onclick="clearRequest(3);">クリア</button>
             </div>
         </div>
     </div>
