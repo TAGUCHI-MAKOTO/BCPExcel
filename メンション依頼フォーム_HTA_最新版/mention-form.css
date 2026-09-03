@@ -599,3 +599,40 @@ button {
 }
 
 
+
+
+
+
+/* v7: 配置・サイズ統一 */
+.clear-request-button{
+    margin-left:0;
+}
+.same-ca-inline{
+    display:block;
+    margin-top:6px;
+    white-space:nowrap;
+}
+.field input:disabled{
+    background:#f3f3f3;
+    color:#555;
+    border-color:#c9c9c9;
+}
+
+
+/* v8: カード下部の操作ボタンを横一列に統一 */
+.card-action-row{
+    margin-top:8px;
+    text-align:right;
+    white-space:nowrap;
+}
+
+.card-action-row button{
+    display:inline-block;
+    vertical-align:middle;
+    margin-left:8px;
+}
+
+.card-action-row button:first-child{
+    margin-left:0;
+}
+
