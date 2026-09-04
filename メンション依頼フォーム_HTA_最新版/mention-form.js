@@ -1,4 +1,4 @@
-﻿var PRODUCTION_CSV_FOLDER = "【本番CSV保存先のパスをここに設定】";
+﻿var CSV_SUBFOLDER_NAME = "書き込み用";
 var PENDING_FOLDER_NAME = "MentionRequest_Pending";
 var BACKGROUND_WORKER_NAME = "mention-request-worker.ps1";
 var WORKER_RETRY_MIN_MS = 450;
@@ -32,7 +32,7 @@ function initApp(){
         getProductionCsvFolder(true);
         setStatus("");
     }catch(configErr){
-        setStatus("本番CSV保存先が未設定です");
+        setStatus("書き込み用フォルダが見つかりません");
     }
 
     lastAvailWidth=screen.availWidth;
@@ -1112,22 +1112,22 @@ function getCurrentFolderPath(){
 
 
 function getProductionCsvFolder(required){
-    var raw=String(PRODUCTION_CSV_FOLDER||"").replace(/^\s+|\s+$/g,"");
+    var fso=new ActiveXObject("Scripting.FileSystemObject");
+    var baseFolder=getCurrentFolderPath();
+    var csvFolder=fso.BuildPath(baseFolder,CSV_SUBFOLDER_NAME);
 
-    if(
-        !raw ||
-        raw.indexOf("本番CSV保存先のパスをここに設定")>=0
-    ){
+    if(!fso.FolderExists(csvFolder)){
         if(required){
             throw new Error(
-                "本番CSV保存先が未設定です。\n\n"+
-                "管理者用のPRODUCTION_CSV_FOLDERへ共有フォルダのパスを設定してください。"
+                "CSV保存先フォルダが見つかりません。\n\n"+
+                "メンション依頼フォームと同じ場所に「"+CSV_SUBFOLDER_NAME+"」フォルダを作成してください。\n\n"+
+                "確認先：\n"+csvFolder
             );
         }
         return "";
     }
 
-    return expandEnvironmentPath(raw);
+    return csvFolder;
 }
 
 function quoteCommandArgument(value){
