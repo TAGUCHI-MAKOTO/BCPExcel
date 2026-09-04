@@ -265,128 +265,44 @@ function resizeApp(centerOnFirst){
     layoutTimer=window.setTimeout(function(){
         try{
             var app=$("app");
-            if(!app){ return; }
-
-            // 一旦100%へ戻して、フォーム本来の寸法を測定
-            document.body.style.zoom="1";
-
-            var appStyle=null;
-            var marginLeft=14;
-            var marginRight=14;
-            var marginTop=14;
-            var marginBottom=16;
+            if(!app){return;}
 
             /*
-              getComputedStyleが利用できる環境では実値を使う。
-              HTA/IE側で取得できない場合はCSS設定値をfallbackにする。
+              v19:
+              フォームの自動縮小を完全に廃止。
+              依頼1件でも3件でもカード・文字・入力欄サイズは同一。
+              画面に収まらない高さだけ縦スクロールで対応する。
             */
-            try{
-                if(window.getComputedStyle){
-                    appStyle=window.getComputedStyle(app,null);
-                    if(appStyle){
-                        marginLeft=parseInt(appStyle.marginLeft,10)||14;
-                        marginRight=parseInt(appStyle.marginRight,10)||14;
-                        marginTop=parseInt(appStyle.marginTop,10)||14;
-                        marginBottom=parseInt(appStyle.marginBottom,10)||16;
-                    }
-                }else if(app.currentStyle){
-                    appStyle=app.currentStyle;
-                    marginLeft=parseInt(appStyle.marginLeft,10)||14;
-                    marginRight=parseInt(appStyle.marginRight,10)||14;
-                    marginTop=parseInt(appStyle.marginTop,10)||14;
-                    marginBottom=parseInt(appStyle.marginBottom,10)||16;
-                }
-            }catch(styleErr){
-            }
-
-            var naturalW=app.offsetWidth+marginLeft+marginRight;
-            var naturalH=app.offsetHeight+marginTop+marginBottom;
+            document.body.style.zoom="1";
 
             var chrome=getCurrentChromeSize();
 
-            // 画面端から少し余裕を残す
-            var screenMarginW=28;
-            var screenMarginH=34;
+            // app本体1680px + 左右余白14px×2
+            var naturalClientW=app.offsetWidth+28;
 
-            var maxOuterW=screen.availWidth-screenMarginW;
-            var maxOuterH=screen.availHeight-screenMarginH;
+            // 現在表示されているカード数に応じた自然高さ
+            var naturalClientH=app.offsetHeight+30;
 
-            var maxClientW=maxOuterW-chrome.width;
-            var maxClientH=maxOuterH-chrome.height;
+            // 24インチ 1920×1080 を想定し、画面端へ少し余白を残す
+            var maxOuterW=screen.availWidth-40;
+            var maxOuterH=screen.availHeight-34;
 
-            var fitW=maxClientW/naturalW;
-            var fitH=maxClientH/naturalH;
-            var fitScale=Math.min(1,fitW,fitH);
+            var wantedW=Math.ceil(naturalClientW+chrome.width);
+            var wantedH=Math.ceil(naturalClientH+chrome.height);
 
-            /*
-              1920×1080級では約96%を上限の目安としつつ、
-              実際に画面へ収まる倍率を最優先する。
-            */
-            var comfortScale=maxOuterW/1960;
-            if(comfortScale>1){comfortScale=1;}
-
-            var scale=Math.min(fitScale,comfortScale);
-
-            if(scale<=0 || isNaN(scale)){
-                scale=1;
+            // 横方向は縮小せず、画面に収まる範囲で固定幅
+            if(wantedW>maxOuterW){
+                wantedW=maxOuterW;
             }
 
-            document.body.style.zoom=String(scale);
-
-            /*
-              v13では左右14pxの余白も含めた「実際のフォーム全幅」で
-              viewportサイズを決定する。
-            */
-            var targetClientW=Math.ceil(naturalW*scale);
-            var targetClientH=Math.ceil(naturalH*scale);
-
-            var wantedW=Math.ceil(targetClientW+chrome.width);
-            var wantedH=Math.ceil(targetClientH+chrome.height);
-
-            if(wantedW>maxOuterW){wantedW=maxOuterW;}
-            if(wantedH>maxOuterH){wantedH=maxOuterH;}
+            // 縦方向だけ画面サイズを上限にする
+            if(wantedH>maxOuterH){
+                wantedH=maxOuterH;
+            }
 
             window.resizeTo(wantedW,wantedH);
             centerCurrentWindow(wantedW,wantedH);
             window.scrollTo(0,0);
-
-            /*
-              Windows表示倍率・テーマ・HTA枠幅による数pxの差を、
-              resize後の実viewportを測って1回だけ補正する。
-              固定のchrome幅だけに依存しないため、
-              24インチ/125%等でも左右余白が揃いやすい。
-            */
-            window.setTimeout(function(){
-                try{
-                    var actualViewport=getViewportSize();
-                    var actualOuter=getWindowOuterSize(wantedW,wantedH);
-
-                    if(actualViewport.width<=0 || actualViewport.height<=0){
-                        return;
-                    }
-
-                    var diffW=targetClientW-actualViewport.width;
-                    var diffH=targetClientH-actualViewport.height;
-
-                    // 極端な補正を避ける
-                    if(diffW>80){diffW=80;}
-                    if(diffW<-80){diffW=-80;}
-                    if(diffH>80){diffH=80;}
-                    if(diffH<-80){diffH=-80;}
-
-                    if(Math.abs(diffW)>=2 || Math.abs(diffH)>=2){
-                        var correctedW=Math.ceil(actualOuter.width+diffW);
-                        var correctedH=Math.ceil(actualOuter.height+diffH);
-
-                        if(correctedW>maxOuterW){correctedW=maxOuterW;}
-                        if(correctedH>maxOuterH){correctedH=maxOuterH;}
-
-                        window.resizeTo(correctedW,correctedH);
-                        centerCurrentWindow(correctedW,correctedH);
-                    }
-                }catch(correctionErr){
-                }
-            },60);
 
         }catch(err){
         }finally{
