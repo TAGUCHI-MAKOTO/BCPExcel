@@ -1,0 +1,52 @@
+name: Build V17 launch worker
+
+on:
+  push:
+    branches:
+      - v17-test-package-final
+    paths:
+      - .github/v17-trigger.txt
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v17-test-package-final
+
+      - name: Generate exact launch_worker.js
+        shell: python
+        run: |
+          from pathlib import Path
+          import base64
+          root = Path("メンション依頼フォーム_V17_複数PCテスト")
+          ps = (root / "worker_logic_reference.txt").read_text(encoding="utf-8")
+          encoded = base64.b64encode(ps.encode("utf-16le")).decode("ascii")
+          js = '''(function () {\n    var a = WScript.Arguments;\n    if (a.length < 3) {\n        WScript.Echo("ERROR: missing args");\n        WScript.Quit(2);\n    }\n    var shell = new ActiveXObject("WScript.Shell");\n    var env = shell.Environment("Process");\n    env("PENDING_PATH") = a.Item(0);\n    env("CSV_FOLDER_ARG") = a.Item(1);\n    env("RESULT_PATH") = a.Item(2);\n    var cmd = "powershell.exe -NoLogo -NoProfile -NonInteractive -EncodedCommand ''' + encoded + '''";\n    shell.Run(cmd, 0, false);\n    WScript.Quit(0);\n})();\n'''
+          (root / "launch_worker.js").write_text(js, encoding="ascii", newline="")
+
+      - name: Verify exact file hash
+        shell: python
+        run: |
+          from pathlib import Path
+          import hashlib
+          p = Path("メンション依頼フォーム_V17_複数PCテスト/launch_worker.js")
+          b = p.read_bytes()
+          sha = hashlib.sha1(b"blob " + str(len(b)).encode() + b"\0" + b).hexdigest()
+          expected = "7678d4aa0acbef682eaad479f0d41adcff04de0b"
+          print("launch_worker.js blob SHA:", sha)
+          if sha != expected:
+              raise SystemExit("launch_worker.js does not match tested V17.1 package")
+
+      - name: Commit generated file and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "メンション依頼フォーム_V17_複数PCテスト/launch_worker.js"
+          git rm -f .github/workflows/build-v17-launch-worker.yml .github/v17-trigger.txt
+          git commit -m "Complete V17.1 multi-PC test package"
+          git push origin HEAD:v17-test-package-final
