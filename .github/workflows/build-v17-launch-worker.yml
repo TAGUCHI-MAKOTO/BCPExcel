@@ -26,7 +26,7 @@ jobs:
           root = Path("メンション依頼フォーム_V17_複数PCテスト")
           ps = (root / "worker_logic_reference.txt").read_text(encoding="utf-8")
           encoded = base64.b64encode(ps.encode("utf-16le")).decode("ascii")
-          js = '''(function () {\n    var a = WScript.Arguments;\n    if (a.length < 3) {\n        WScript.Echo("ERROR: missing args");\n        WScript.Quit(2);\n    }\n    var shell = new ActiveXObject("WScript.Shell");\n    var env = shell.Environment("Process");\n    env("PENDING_PATH") = a.Item(0);\n    env("CSV_FOLDER_ARG") = a.Item(1);\n    env("RESULT_PATH") = a.Item(2);\n    var cmd = "powershell.exe -NoLogo -NoProfile -NonInteractive -EncodedCommand ''' + encoded + '''";\n    shell.Run(cmd, 0, false);\n    WScript.Quit(0);\n})();\n'''
+          js = '''(function () {\n    var a = WScript.Arguments;\n    if (a.length < 3) {\n        WScript.Echo("ERROR: missing args");\n        WScript.Quit(2);\n    }\n    var shell = new ActiveXObject("WScript.Shell");\n    var env = shell.Environment("Process");\n    env("PENDING_PATH") = a.Item(0);\n    env("CSV_FOLDER_ARG") = a.Item(1);\n    env("RESULT_PATH") = a.Item(2);\n    var cmd = "powershell.exe -NoLogo -NoProfile -NonInteractive -EncodedCommand ''' + encoded + '''";\n    shell.Run(cmd, 0, false);\n    WScript.Quit(0);\n})();'''
           (root / "launch_worker.js").write_text(js, encoding="ascii", newline="")
 
       - name: Verify exact file hash
