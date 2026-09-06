@@ -846,3 +846,36 @@ select:focus{
 .card-action-row button{
     vertical-align:middle;
 }
+
+
+/* =========================================================
+   v24: 未送信再送ボタンを強調
+   ========================================================= */
+
+#retryPendingButton{
+    background:#ff1f1f;
+    color:#ffffff;
+    border:2px solid #d80000;
+    font-weight:bold;
+    box-shadow:0 2px 6px rgba(0,0,0,0.22);
+}
+
+#retryPendingButton:hover{
+    background:#d90000;
+    border-color:#b60000;
+}
+
+#retryPendingButton:active{
+    background:#b80000;
+    border-color:#990000;
+}
+
+
+/* =========================================================
+   v25: 未送信エラーメッセージを赤字強調
+   ========================================================= */
+
+.pending-retry-text.failed{
+    color:#e00000;
+    font-weight:bold;
+}

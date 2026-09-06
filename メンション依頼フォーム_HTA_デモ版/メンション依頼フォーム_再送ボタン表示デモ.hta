@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=11">
-<title>メンション依頼フォーム｜仕様書用デモ</title>
+<title>メンション依頼フォーム｜再送ボタン表示デモ</title>
 
 <hta:application
     id="MentionRequestApp"
@@ -63,7 +63,6 @@ Function GetWindowsDisplayNameHTA()
 End Function
 </script>
 
-<script type="text/javascript" src="mention-form.js"></script>
 <script type="text/javascript" src="mention-form-demo.js"></script>
 </head>
 
@@ -112,7 +111,7 @@ End Function
                         </div>
 
                         <div class="field due">
-                            <label>期日</label>
+                            <label>期日または面接日程</label>
                             <input type="text" id="dueDate1">
                         </div>
                     </div>
@@ -183,7 +182,7 @@ End Function
                         </div>
 
                         <div class="field due">
-                            <label>期日</label>
+                            <label>期日または面接日程</label>
                             <input type="text" id="dueDate2">
                         </div>
                     </div>
@@ -255,7 +254,7 @@ End Function
                         </div>
 
                         <div class="field due">
-                            <label>期日</label>
+                            <label>期日または面接日程</label>
                             <input type="text" id="dueDate3">
                         </div>
                     </div>
@@ -287,9 +286,10 @@ End Function
             <label>拠点</label>
             <select id="requestBase">
                 <option value="">選択してください</option>
-                <option value="呉服">呉服</option>
+                <option value="首都圏">首都圏</option>
                 <option value="札幌">札幌</option>
                 <option value="新潟">新潟</option>
+                <option value="呉服">呉服</option>
             </select>
         </div>
 

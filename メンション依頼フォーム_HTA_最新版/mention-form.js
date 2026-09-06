@@ -7,11 +7,21 @@ var WORKER_MAX_RETRY_SECONDS = 300;
 
 var TYPE_OPTIONS = [
     "",
-    "通常",
-    "確認",
-    "代理対応",
-    "その他",
-    "【長文サンプル】候補者・企業双方への確認が必要なため、処理前に担当者へエスカレーションする"
+    "① 通常対応",
+    "② 日程確認",
+    "③ 代理対応",
+    "④ 再調整",
+    "⑤ 候補者への確認が必要なため、内容を確認してから対応を進める",
+    "⑥ 企業確認",
+    "⑦ 面接日程の変更に伴い、候補者・企業双方への連絡が必要",
+    "⑧ 至急確認",
+    "⑨ 担当者へ確認後、回答内容に沿って処理を実施する",
+    "⑩ 日程確定",
+    "⑪ 複数候補日の調整が必要なため、関係者の予定を確認して対応する",
+    "⑫ 情報更新",
+    "⑬ 対応可否を確認し、必要に応じて担当部署へエスカレーションする",
+    "⑭ 保留対応",
+    "⑮ その他の個別対応"
 ];
 
 var visibleRequestCount = 1;
@@ -46,11 +56,19 @@ function initApp(){
 
     bindSameCASync();
 
-    // Pendingの有無を監視し、再送UIを自動更新
-    startPendingWatcher();
+    /*
+      v26:
+      起動時にPendingがある場合、
+      先に自動再送状態へ入れてからWatcherを開始する。
+      これにより一瞬だけ「失敗＋再送ボタン」が表示されてから
+      「自動再送中」へ切り替わるチラつきを防ぐ。
+    */
 
-    // 前回終了時などに残ったPendingを自動再送
+    // 前回終了時などに残ったPendingを先に自動再送
     recoverPendingPackagesOnStartup();
+
+    // その後にPending状態監視を開始
+    startPendingWatcher();
 }
 
 function setRequesterName(){
@@ -95,7 +113,7 @@ function populateTypes(){
         for(j=0;j<TYPE_OPTIONS.length;j++){
             opt=document.createElement("option");
             opt.value=TYPE_OPTIONS[j];
-            opt.text=TYPE_OPTIONS[j];
+            opt.text=(TYPE_OPTIONS[j]==="" ? "選択してください" : TYPE_OPTIONS[j]);
             sel.add(opt);
         }
     }
@@ -1137,6 +1155,7 @@ function updatePendingRetryUI(){
         }
 
         area.className="pending-retry-area hidden";
+        text.className="pending-retry-text";
         text.innerText="";
         setRetryButtonVisible(false);
         setSendButtonVisible(true);
@@ -1158,16 +1177,19 @@ function updatePendingRetryUI(){
     area.className="pending-retry-area";
 
     if(pendingRetryState==="sending"){
+        text.className="pending-retry-text";
         text.innerText="送信中です… 完了後、Windows通知でお知らせします。";
         setRetryButtonVisible(false);
         setSendButtonVisible(true);
 
     }else if(pendingRetryState==="auto"){
+        text.className="pending-retry-text";
         text.innerText="未送信データを自動再送中です…";
         setRetryButtonVisible(false);
         setSendButtonVisible(true);
 
     }else if(pendingRetryState==="manual"){
+        text.className="pending-retry-text";
         text.innerText="再送中です… 完了後、Windows通知でお知らせします。";
         setRetryButtonVisible(false);
         setSendButtonVisible(true);
@@ -1175,7 +1197,8 @@ function updatePendingRetryUI(){
     }else{
         // Pendingはあるが処理中ではない＝送信失敗
         pendingRetryState="failed";
-        text.innerText="⚠ 送信できませんでした｜未送信 "+count+"件";
+        text.className="pending-retry-text failed";
+        text.innerText="送信できませんでした│未送信 "+count+"件";
         setRetryButtonVisible(true);
         setSendButtonVisible(true);
     }
