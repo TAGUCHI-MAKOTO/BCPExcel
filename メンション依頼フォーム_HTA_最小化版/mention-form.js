@@ -3,7 +3,70 @@ var PENDING_FOLDER_NAME = "MentionRequest_Pending";
 var BACKGROUND_WORKER_NAME = "mention-request-worker.js";
 var WORKER_MAX_RETRY_SECONDS = 300;
 
-\n\n/* =========================================================\n   受付後最小化＋実書き込みテスト\n   ・Pending保存後すぐWorkerを起動\n   ・新規送信だけ共有CSV書き込み開始を10秒遅延\n   ・受付モーダルOK押下後、フォームを最小化\n   ・共有CSV反映＋検証＋Pending削除後はWorkerが完了通知\n   ========================================================= */\nvar NEW_SEND_WRITE_DELAY_MS = 10000;\n\nfunction showAcceptedAndPrepareMinimize(){\n    var button=$("systemModalOkButton");\n\n    if(button){\n        button.onclick=confirmAcceptedAndMinimize;\n    }\n\n    showSystemModal(\n        "依頼を受け付けました",\n        "送信処理を開始しました。\\n\\nOKを押すとフォームを最小化します。",\n        "accepted",\n        true\n    );\n}\n\nfunction confirmAcceptedAndMinimize(){\n    hideSystemModal();\n\n    // 受付後に入力欄を初期化。拠点・依頼者は既存仕様どおり維持。\n    resetAfterSend();\n    setStatus("送信中です…");\n\n    // HTML Help ActiveX Control の Minimize コマンドで\n    // 現在のHTAウィンドウを直接最小化する。\n    window.setTimeout(function(){\n        var minimized=false;\n\n        try{\n            var ctrl=$("HHCtrlMinimizeWindowObject");\n            if(ctrl){\n                ctrl.Click();\n                minimized=true;\n            }\n        }catch(minErr){}\n\n        // ActiveX Controlが利用できない環境のみフォールバック。\n        if(!minimized){\n            try{\n                var shell=new ActiveXObject("WScript.Shell");\n                try{\n                    shell.AppActivate(document.title);\n                }catch(activateErr){}\n\n                shell.SendKeys("% ");\n                window.setTimeout(function(){\n                    try{\n                        shell.SendKeys("n");\n                    }catch(keyErr2){}\n                },180);\n            }catch(keyErr1){}\n        }\n    },150);\n}\n
+
+/* =========================================================
+   受付後最小化＋実書き込みテスト
+   ・Pending保存後すぐWorkerを起動
+   ・新規送信だけ共有CSV書き込み開始を10秒遅延
+   ・受付モーダルOK押下後、フォームを最小化
+   ・共有CSV反映＋検証＋Pending削除後はWorkerが完了通知
+   ========================================================= */
+var NEW_SEND_WRITE_DELAY_MS = 10000;
+
+function showAcceptedAndPrepareMinimize(){
+    var button=$("systemModalOkButton");
+
+    if(button){
+        button.onclick=confirmAcceptedAndMinimize;
+    }
+
+    showSystemModal(
+        "依頼を受け付けました",
+        "送信処理を開始しました。\n\nOKを押すとフォームを最小化します。",
+        "accepted",
+        true
+    );
+}
+
+function confirmAcceptedAndMinimize(){
+    hideSystemModal();
+
+    // 受付後に入力欄を初期化。拠点・依頼者は既存仕様どおり維持。
+    resetAfterSend();
+    setStatus("送信中です…");
+
+    // HTML Help ActiveX Control の Minimize コマンドで
+    // 現在のHTAウィンドウを直接最小化する。
+    window.setTimeout(function(){
+        var minimized=false;
+
+        try{
+            var ctrl=$("HHCtrlMinimizeWindowObject");
+            if(ctrl){
+                ctrl.Click();
+                minimized=true;
+            }
+        }catch(minErr){}
+
+        // ActiveX Controlが利用できない環境のみフォールバック。
+        if(!minimized){
+            try{
+                var shell=new ActiveXObject("WScript.Shell");
+                try{
+                    shell.AppActivate(document.title);
+                }catch(activateErr){}
+
+                shell.SendKeys("% ");
+                window.setTimeout(function(){
+                    try{
+                        shell.SendKeys("n");
+                    }catch(keyErr2){}
+                },180);
+            }catch(keyErr1){}
+        }
+    },150);
+}
+
 var TYPE_OPTIONS = [
     "",
     "① 通常対応",
@@ -669,7 +732,70 @@ function trimValue(id){
 }
 
 
-function sendRequest(){\n    if(!validateForm()){ return; }\n\n    var requests=[],i,req;\n    for(i=1;i<=visibleRequestCount;i++){\n        req=collectRequest(i);\n        if(i===1||hasAnyInput(req)){ requests.push(req); }\n    }\n\n    var requester=$("requesterName").innerText;\n    var requestId=createRequestId(requester);\n    var sentAt=formatDateTime(new Date());\n    var baseName=val("requestBase");\n    var lines=[];\n    var pendingPath="";\n\n    for(i=0;i<requests.length;i++){\n        lines.push(makeCsvLine(requestId,sentAt,baseName,requester,requests[i]));\n    }\n\n    try{\n        var csvFolder=getProductionCsvFolder(true);\n\n        // 1. まずPendingへ保存。\n        pendingPath=savePendingPackage(\n            baseName,\n            requester,\n            requestId,\n            sentAt,\n            requests,\n            lines,\n            csvFolder\n        );\n\n        beginPendingState("sending");\n\n        // 2. 新規送信は「送信ボタン押下から約10秒後」まで\n        //    共有CSVへの書き込み開始を待たせる。\n        var notBeforeMs=(new Date()).getTime()+NEW_SEND_WRITE_DELAY_MS;\n\n        // 3. Workerは先に別プロセス起動。\n        //    フォームを閉じてもWorker自体は継続する。\n        launchBackgroundWorker(pendingPath,csvFolder,notBeforeMs);\n\n        // 4. 受付完了を表示。OKでフォーム最小化。\n        showAcceptedAndPrepareMinimize();\n\n    }catch(err){\n        if(pendingPath && getPendingCount()>0){\n            pendingRetryState="failed";\n            pendingRetryStartedAt=0;\n            updatePendingRetryUI();\n        }else{\n            pendingRetryState="";\n            pendingRetryStartedAt=0;\n            updatePendingRetryUI();\n\n            alert(\n                "送信受付に失敗しました。\\n\\n"+\n                String(err.message||err.description||err)\n            );\n        }\n    }\n}
+function sendRequest(){
+    if(!validateForm()){ return; }
+
+    var requests=[],i,req;
+    for(i=1;i<=visibleRequestCount;i++){
+        req=collectRequest(i);
+        if(i===1||hasAnyInput(req)){ requests.push(req); }
+    }
+
+    var requester=$("requesterName").innerText;
+    var requestId=createRequestId(requester);
+    var sentAt=formatDateTime(new Date());
+    var baseName=val("requestBase");
+    var lines=[];
+    var pendingPath="";
+
+    for(i=0;i<requests.length;i++){
+        lines.push(makeCsvLine(requestId,sentAt,baseName,requester,requests[i]));
+    }
+
+    try{
+        var csvFolder=getProductionCsvFolder(true);
+
+        // 1. まずPendingへ保存。
+        pendingPath=savePendingPackage(
+            baseName,
+            requester,
+            requestId,
+            sentAt,
+            requests,
+            lines,
+            csvFolder
+        );
+
+        beginPendingState("sending");
+
+        // 2. 新規送信は「送信ボタン押下から約10秒後」まで
+        //    共有CSVへの書き込み開始を待たせる。
+        var notBeforeMs=(new Date()).getTime()+NEW_SEND_WRITE_DELAY_MS;
+
+        // 3. Workerは先に別プロセス起動。
+        //    フォームを閉じてもWorker自体は継続する。
+        launchBackgroundWorker(pendingPath,csvFolder,notBeforeMs);
+
+        // 4. 受付完了を表示。OKでフォーム最小化。
+        showAcceptedAndPrepareMinimize();
+
+    }catch(err){
+        if(pendingPath && getPendingCount()>0){
+            pendingRetryState="failed";
+            pendingRetryStartedAt=0;
+            updatePendingRetryUI();
+        }else{
+            pendingRetryState="";
+            pendingRetryStartedAt=0;
+            updatePendingRetryUI();
+
+            alert(
+                "送信受付に失敗しました。\n\n"+
+                String(err.message||err.description||err)
+            );
+        }
+    }
+}
 
 
 var pendingCancelRequestNo=0;

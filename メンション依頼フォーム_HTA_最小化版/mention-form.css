@@ -878,4 +878,35 @@ select:focus{
 .pending-retry-text.failed{
     color:#e00000;
     font-weight:bold;
-}\n\n/* ===== 受付完了ポップアップ：フォーム基調の紫テーマ ===== */\n.system-modal-accepted{\n    background:#f4efff !important;\n    border:2px solid #8d6ccf !important;\n    box-shadow:0 10px 28px rgba(92,66,150,.24) !important;\n}\n\n.system-modal-accepted .system-modal-title,\n.system-modal-accepted #systemModalTitle{\n    color:#5e4596 !important;\n}\n\n.system-modal-accepted .system-modal-message,\n.system-modal-accepted #systemModalMessage{\n    color:#3f3554 !important;\n}\n\n.system-modal-accepted .system-modal-button,\n.system-modal-accepted #systemModalOkButton{\n    background:#7656b5 !important;\n    border-color:#684aa7 !important;\n    color:#fff !important;\n}\n\n.system-modal-accepted .system-modal-button:hover,\n.system-modal-accepted #systemModalOkButton:hover{\n    background:#6748a5 !important;\n}\n
+}
+
+
+/* ===== 受付完了ポップアップ：フォーム基調の紫テーマ ===== */
+.system-modal-accepted{
+    background:#f4efff !important;
+    border:2px solid #8d6ccf !important;
+    box-shadow:0 10px 28px rgba(92,66,150,.24) !important;
+}
+
+.system-modal-accepted .system-modal-title,
+.system-modal-accepted #systemModalTitle{
+    color:#5e4596 !important;
+}
+
+.system-modal-accepted .system-modal-message,
+.system-modal-accepted #systemModalMessage{
+    color:#3f3554 !important;
+}
+
+.system-modal-accepted .system-modal-button,
+.system-modal-accepted #systemModalOkButton{
+    background:#7656b5 !important;
+    border-color:#684aa7 !important;
+    color:#fff !important;
+}
+
+.system-modal-accepted .system-modal-button:hover,
+.system-modal-accepted #systemModalOkButton:hover{
+    background:#6748a5 !important;
+}
+
