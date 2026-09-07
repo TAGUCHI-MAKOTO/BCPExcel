@@ -1,0 +1,256 @@
+name: Fix mention form minimize variant
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-mention-minimize.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sync minimize JS and CSS exactly
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re, shutil
+
+          src = Path('メンション依頼フォーム_HTA_最新版')
+          dst = Path('メンション依頼フォーム_HTA_最小化版')
+          shutil.copy2(src / 'mention-form.js', dst / 'mention-form.js')
+          shutil.copy2(src / 'mention-form.css', dst / 'mention-form.css')
+
+          js = dst / 'mention-form.js'
+          css = dst / 'mention-form.css'
+
+          t = js.read_text(encoding='utf-8-sig')
+          helper = r'''
+/* =========================================================
+   受付後最小化＋実書き込みテスト
+   ・Pending保存後すぐWorkerを起動
+   ・新規送信だけ共有CSV書き込み開始を10秒遅延
+   ・受付モーダルOK押下後、フォームを最小化
+   ・共有CSV反映＋検証＋Pending削除後はWorkerが完了通知
+   ========================================================= */
+var NEW_SEND_WRITE_DELAY_MS = 10000;
+
+function showAcceptedAndPrepareMinimize(){
+    var button=$("systemModalOkButton");
+
+    if(button){
+        button.onclick=confirmAcceptedAndMinimize;
+    }
+
+    showSystemModal(
+        "依頼を受け付けました",
+        "送信処理を開始しました。\n\nOKを押すとフォームを最小化します。",
+        "accepted",
+        true
+    );
+}
+
+function confirmAcceptedAndMinimize(){
+    hideSystemModal();
+
+    // 受付後に入力欄を初期化。拠点・依頼者は既存仕様どおり維持。
+    resetAfterSend();
+    setStatus("送信中です…");
+
+    // HTML Help ActiveX Control の Minimize コマンドで
+    // 現在のHTAウィンドウを直接最小化する。
+    window.setTimeout(function(){
+        var minimized=false;
+
+        try{
+            var ctrl=$("HHCtrlMinimizeWindowObject");
+            if(ctrl){
+                ctrl.Click();
+                minimized=true;
+            }
+        }catch(minErr){}
+
+        // ActiveX Controlが利用できない環境のみフォールバック。
+        if(!minimized){
+            try{
+                var shell=new ActiveXObject("WScript.Shell");
+                try{
+                    shell.AppActivate(document.title);
+                }catch(activateErr){}
+
+                shell.SendKeys("% ");
+                window.setTimeout(function(){
+                    try{
+                        shell.SendKeys("n");
+                    }catch(keyErr2){}
+                },180);
+            }catch(keyErr1){}
+        }
+    },150);
+}
+'''
+          t = t.replace('var TYPE_OPTIONS = [', helper + '\nvar TYPE_OPTIONS = [', 1)
+
+          m = re.search(r'function sendRequest\(\)\{', t)
+          if not m: raise SystemExit('sendRequest not found')
+          brace = t.find('{', m.start()); depth = 0; end = None
+          for i in range(brace, len(t)):
+              if t[i] == '{': depth += 1
+              elif t[i] == '}':
+                  depth -= 1
+                  if depth == 0:
+                      end = i + 1
+                      break
+          if end is None: raise SystemExit('sendRequest end not found')
+
+          new_send = r'''function sendRequest(){
+    if(!validateForm()){ return; }
+
+    var requests=[],i,req;
+    for(i=1;i<=visibleRequestCount;i++){
+        req=collectRequest(i);
+        if(i===1||hasAnyInput(req)){ requests.push(req); }
+    }
+
+    var requester=$("requesterName").innerText;
+    var requestId=createRequestId(requester);
+    var sentAt=formatDateTime(new Date());
+    var baseName=val("requestBase");
+    var lines=[];
+    var pendingPath="";
+
+    for(i=0;i<requests.length;i++){
+        lines.push(makeCsvLine(requestId,sentAt,baseName,requester,requests[i]));
+    }
+
+    try{
+        var csvFolder=getProductionCsvFolder(true);
+
+        // 1. まずPendingへ保存。
+        pendingPath=savePendingPackage(
+            baseName,
+            requester,
+            requestId,
+            sentAt,
+            requests,
+            lines,
+            csvFolder
+        );
+
+        beginPendingState("sending");
+
+        // 2. 新規送信は「送信ボタン押下から約10秒後」まで
+        //    共有CSVへの書き込み開始を待たせる。
+        var notBeforeMs=(new Date()).getTime()+NEW_SEND_WRITE_DELAY_MS;
+
+        // 3. Workerは先に別プロセス起動。
+        //    フォームを閉じてもWorker自体は継続する。
+        launchBackgroundWorker(pendingPath,csvFolder,notBeforeMs);
+
+        // 4. 受付完了を表示。OKでフォーム最小化。
+        showAcceptedAndPrepareMinimize();
+
+    }catch(err){
+        if(pendingPath && getPendingCount()>0){
+            pendingRetryState="failed";
+            pendingRetryStartedAt=0;
+            updatePendingRetryUI();
+        }else{
+            pendingRetryState="";
+            pendingRetryStartedAt=0;
+            updatePendingRetryUI();
+
+            alert(
+                "送信受付に失敗しました。\n\n"+
+                String(err.message||err.description||err)
+            );
+        }
+    }
+}'''
+          t = t[:m.start()] + new_send + t[end:]
+          t = t.replace('function launchBackgroundWorker(pendingPath,csvFolderFallback){','function launchBackgroundWorker(pendingPath,csvFolderFallback,notBeforeMs){',1)
+
+          old = '''    csvFolderFallback=String(csvFolderFallback||"");
+
+    /*
+      v28.3:
+      PowerShellを完全廃止。WorkerはASCIIのみで構成。
+      完了ポップアップ表示のため、wscript.exe の //B を廃止。
+      WSH(JScript) Workerを別プロセスで非同期起動する。
+      HTAを閉じてもWorkerは継続する。
+    */
+    var command=
+        "wscript.exe //NoLogo //E:JScript "+
+        quoteCommandArgument(workerPath)+" "+
+        quoteCommandArgument(pendingPath)+" "+
+        quoteCommandArgument(csvFolderFallback);'''
+          new = '''    csvFolderFallback=String(csvFolderFallback||"");
+    notBeforeMs=parseInt(notBeforeMs,10);
+    if(isNaN(notBeforeMs) || notBeforeMs<0){
+        notBeforeMs=0;
+    }
+
+    /*
+      v28.3ベース:
+      Pure JScript Workerを別プロセスで非同期起動。
+      第3引数がある新規送信のみ、指定時刻まで共有CSV書き込みを待機する。
+      起動時復旧・手動再送は第3引数なしのため即時処理。
+    */
+    var command=
+        "wscript.exe //NoLogo //E:JScript "+
+        quoteCommandArgument(workerPath)+" "+
+        quoteCommandArgument(pendingPath)+" "+
+        quoteCommandArgument(csvFolderFallback)+" "+
+        quoteCommandArgument(String(notBeforeMs));'''
+          if old not in t: raise SystemExit('launch block not found')
+          t = t.replace(old, new, 1)
+          js.write_text(t, encoding='utf-8-sig')
+
+          t = css.read_text(encoding='utf-8-sig').rstrip()
+          purple = r'''
+/* ===== 受付完了ポップアップ：フォーム基調の紫テーマ ===== */
+.system-modal-accepted{
+    background:#f4efff !important;
+    border:2px solid #8d6ccf !important;
+    box-shadow:0 10px 28px rgba(92,66,150,.24) !important;
+}
+
+.system-modal-accepted .system-modal-title,
+.system-modal-accepted #systemModalTitle{
+    color:#5e4596 !important;
+}
+
+.system-modal-accepted .system-modal-message,
+.system-modal-accepted #systemModalMessage{
+    color:#3f3554 !important;
+}
+
+.system-modal-accepted .system-modal-button,
+.system-modal-accepted #systemModalOkButton{
+    background:#7656b5 !important;
+    border-color:#684aa7 !important;
+    color:#fff !important;
+}
+
+.system-modal-accepted .system-modal-button:hover,
+.system-modal-accepted #systemModalOkButton:hover{
+    background:#6748a5 !important;
+}
+'''
+          t = t + '\n\n' + purple + '\n'
+          css.write_text(t, encoding='utf-8-sig')
+          PY
+
+          rm -f .github/workflows/fix-mention-minimize.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Fix minimize variant exact file sync'
+          git push
