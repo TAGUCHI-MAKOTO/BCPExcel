@@ -1,8 +1,6 @@
 ﻿var CSV_SUBFOLDER_NAME = "書き込み用";
 var PENDING_FOLDER_NAME = "MentionRequest_Pending";
-var BACKGROUND_WORKER_NAME = "mention-request-worker.ps1";
-var WORKER_RETRY_MIN_MS = 450;
-var WORKER_RETRY_MAX_MS = 1250;
+var BACKGROUND_WORKER_NAME = "mention-request-worker.js";
 var WORKER_MAX_RETRY_SECONDS = 300;
 
 var TYPE_OPTIONS = [
@@ -715,7 +713,7 @@ function sendRequest(){
         resetAfterSend();
 
         // 受付完了モーダルは表示しない。
-        // footerの「送信中です…」表示とWindows通知で状態を伝える。
+        // footerの送信状態表示で処理状況を伝える。
 
     }catch(err){
         if(pendingPath && getPendingCount()>0){
@@ -1099,7 +1097,8 @@ function getPendingFilePaths(){
 
         for(;!enumerator.atEnd();enumerator.moveNext()){
             file=enumerator.item();
-            if(String(fso.GetExtensionName(file.Name)).toLowerCase()==="pending"){
+            var ext=String(fso.GetExtensionName(file.Name)).toLowerCase();
+            if(ext==="csv"){
                 result.push(String(file.Path));
             }
         }
@@ -1178,7 +1177,7 @@ function updatePendingRetryUI(){
 
     if(pendingRetryState==="sending"){
         text.className="pending-retry-text";
-        text.innerText="送信中です… 完了後、Windows通知でお知らせします。";
+        text.innerText="送信中です…";
         setRetryButtonVisible(false);
         setSendButtonVisible(true);
 
@@ -1190,7 +1189,7 @@ function updatePendingRetryUI(){
 
     }else if(pendingRetryState==="manual"){
         text.className="pending-retry-text";
-        text.innerText="再送中です… 完了後、Windows通知でお知らせします。";
+        text.innerText="再送中です…";
         setRetryButtonVisible(false);
         setSendButtonVisible(true);
 
@@ -1286,7 +1285,7 @@ function launchBackgroundWorker(pendingPath,csvFolderFallback){
     pendingPath=String(pendingPath||"");
 
     if(!pendingPath || !fso.FileExists(pendingPath)){
-        throw new Error("Pendingファイルの引き渡しに失敗しました。");
+        throw new Error("退避CSVの引き渡しに失敗しました。");
     }
 
     if(!fso.FileExists(workerPath)){
@@ -1295,40 +1294,23 @@ function launchBackgroundWorker(pendingPath,csvFolderFallback){
 
     csvFolderFallback=String(csvFolderFallback||"");
 
+    /*
+      v28.3:
+      PowerShellを完全廃止。WorkerはASCIIのみで構成。
+      完了ポップアップ表示のため、wscript.exe の //B を廃止。
+      WSH(JScript) Workerを別プロセスで非同期起動する。
+      HTAを閉じてもWorkerは継続する。
+    */
     var command=
-        "powershell.exe "+
-        "-NoProfile "+
-        "-NonInteractive "+
-        "-ExecutionPolicy Bypass "+
-        "-WindowStyle Hidden "+
-        "-File "+quoteCommandArgument(workerPath)+" "+
-        "-PendingPath "+quoteCommandArgument(pendingPath)+" "+
-        "-CsvFolder "+quoteCommandArgument(csvFolderFallback)+" "+
-        "-RetryMinMilliseconds "+String(WORKER_RETRY_MIN_MS)+" "+
-        "-RetryMaxMilliseconds "+String(WORKER_RETRY_MAX_MS)+" "+
-        "-MaxRetrySeconds "+String(WORKER_MAX_RETRY_SECONDS);
+        "wscript.exe //NoLogo //E:JScript "+
+        quoteCommandArgument(workerPath)+" "+
+        quoteCommandArgument(pendingPath)+" "+
+        quoteCommandArgument(csvFolderFallback);
 
-    // 非同期起動。HTAを閉じてもworkerは継続。
     var result=shell.Run(command,0,false);
 
     if(result!==0){
         throw new Error("バックグラウンド送信処理を起動できませんでした。");
-    }
-}
-
-function showAcceptedMessage(){
-    try{
-        showSystemModal(
-            "送信完了",
-            "メンション依頼を送信しました。\n\n受け付け完了後、右下のWindows通知でお知らせいたします。",
-            "accepted",
-            true
-        );
-    }catch(err){
-        alert(
-            "メンション依頼を送信しました。\n\n"+
-            "受け付け完了後、右下のWindows通知でお知らせいたします。"
-        );
     }
 }
 
@@ -1338,153 +1320,38 @@ function getPendingFolderPath(){
     return desktop+"\\"+PENDING_FOLDER_NAME;
 }
 
-function pendingDisplayValue(value){
-    var s=String(value==null?"":value);
-
-    // 万一改行が入っていても、人間向け表示が崩れにくいよう整形
-    s=s.replace(/\r\n/g,"\n").replace(/\r/g,"\n");
-    s=s.replace(/\n/g," / ");
-
-    return s;
-}
-
-function writePendingRequestReadable(file,req){
-    file.WriteLine("【依頼 "+req.requestNo+"】");
-    file.WriteLine("組織　　　　："+pendingDisplayValue(req.organization));
-    file.WriteLine("CA名　　　　："+pendingDisplayValue(req.caName));
-    file.WriteLine("代理CA組織　："+pendingDisplayValue(req.proxyOrganization));
-    file.WriteLine("代理CA名1　 ："+pendingDisplayValue(req.proxyCA1));
-    file.WriteLine("代理CA名2　 ："+pendingDisplayValue(req.proxyCA2));
-    file.WriteLine("代理CA名3　 ："+pendingDisplayValue(req.proxyCA3));
-    file.WriteLine("メールメモ　："+pendingDisplayValue(req.mailMemo));
-    file.WriteLine("処理日時　　："+pendingDisplayValue(req.processedAt));
-    file.WriteLine("期日　　　　："+pendingDisplayValue(req.dueDate));
-    file.WriteLine("時短　　　　："+(req.shortTime?"●":""));
-    file.WriteLine("至急　　　　："+(req.urgent?"●":""));
-    file.WriteLine("タイプ　　　："+pendingDisplayValue(req.type));
-    file.WriteLine("");
-}
-
 function savePendingPackage(baseName,requester,requestId,sentAt,requests,lines,csvFolder){
     var fso=new ActiveXObject("Scripting.FileSystemObject");
     var folderPath=getPendingFolderPath();
 
     ensureFolder(fso,folderPath);
 
-    var fileName=sanitizeFileName(requestId)+".pending";
+    var fileName=sanitizeFileName(requestId)+".csv";
     var filePath=folderPath+"\\"+fileName;
 
     // 万一同名があれば上書きせず別名にする
     if(fso.FileExists(filePath)){
-        fileName=sanitizeFileName(requestId)+"_"+String(new Date().getTime())+".pending";
+        fileName=sanitizeFileName(requestId)+"_"+String(new Date().getTime())+".csv";
         filePath=folderPath+"\\"+fileName;
     }
 
-    // Unicodeで保存。Windowsのメモ帳でそのまま日本語を確認できる。
-    var file=fso.CreateTextFile(filePath,false,true);
-
-    // =====================================================
-    // 人が確認するための表示エリア
-    // =====================================================
-    file.WriteLine("メンション依頼フォーム｜未送信データ");
-    file.WriteLine("============================================================");
-    file.WriteLine("状態　　　　：未送信");
-    file.WriteLine("保存日時　　："+pendingDisplayValue(sentAt));
-    file.WriteLine("RequestID　 ："+pendingDisplayValue(requestId));
-    file.WriteLine("拠点　　　　："+pendingDisplayValue(baseName));
-    file.WriteLine("依頼者　　　："+pendingDisplayValue(requester));
-    file.WriteLine("依頼件数　　："+String(requests.length));
-    file.WriteLine("送信先　　　："+pendingDisplayValue(csvFolder));
-    file.WriteLine("============================================================");
-    file.WriteLine("");
-
+    /*
+      v27:
+      退避ファイルそのものをCSV化。
+      日本語WindowsのANSI(CP932)で保存し、
+      共有CSVへ反映する予定の行をそのまま保持する。
+    */
+    var file=fso.CreateTextFile(filePath,false,false);
     var i;
-    for(i=0;i<requests.length;i++){
-        writePendingRequestReadable(file,requests[i]);
-    }
 
-    file.WriteLine("============================================================");
-    file.WriteLine("※ここから下はCSV再送用の機械データです。");
-    file.WriteLine("※編集・削除しないでください。");
-    file.WriteLine("----- MACHINE_DATA_BEGIN -----");
-    file.WriteLine("FORMAT=MENTION_REQUEST_PENDING_V3");
-    file.WriteLine("BASE="+encodeURIComponent(String(baseName||"")));
-    file.WriteLine("REQUEST_ID="+encodeURIComponent(String(requestId||"")));
-    file.WriteLine("CREATED="+encodeURIComponent(String(sentAt||"")));
-    file.WriteLine("CSV_FOLDER="+encodeURIComponent(String(csvFolder||"")));
+    file.WriteLine(makeHeaderLine());
 
     for(i=0;i<lines.length;i++){
-        // CSV行内に記号や改行があっても壊れないようURLエンコード
-        file.WriteLine("LINE="+encodeURIComponent(String(lines[i]||"")));
+        file.WriteLine(String(lines[i]||""));
     }
-
-    file.WriteLine("----- MACHINE_DATA_END -----");
 
     file.Close();
     return filePath;
-}
-
-function readPendingPackage(filePath){
-    var fso=new ActiveXObject("Scripting.FileSystemObject");
-    var file=fso.OpenTextFile(filePath,1,false,-1);
-    var text=file.ReadAll();
-    file.Close();
-
-    var rows=String(text)
-        .replace(/\r\n/g,"\n")
-        .replace(/\r/g,"\n")
-        .split("\n");
-
-    var data={
-        filePath:filePath,
-        baseName:"",
-        requestId:"",
-        created:"",
-        csvFolder:"",
-        lines:[]
-    };
-
-    var format="";
-    var i,row;
-
-    // V1実験版も、今回のV2可読版も読めるようにする
-    if(rows.length>0 && rows[0]==="MENTION_REQUEST_PENDING_V1"){
-        format="MENTION_REQUEST_PENDING_V1";
-    }
-
-    for(i=0;i<rows.length;i++){
-        row=rows[i];
-
-        if(row.indexOf("FORMAT=")===0){
-            format=row.substring(7);
-        }else if(row.indexOf("BASE=")===0){
-            data.baseName=decodeURIComponent(row.substring(5));
-        }else if(row.indexOf("REQUEST_ID=")===0){
-            data.requestId=decodeURIComponent(row.substring(11));
-        }else if(row.indexOf("CREATED=")===0){
-            data.created=decodeURIComponent(row.substring(8));
-        }else if(row.indexOf("CSV_FOLDER=")===0){
-            data.csvFolder=decodeURIComponent(row.substring(11));
-        }else if(row.indexOf("LINE=")===0){
-            data.lines.push(decodeURIComponent(row.substring(5)));
-        }
-    }
-
-    if(format!=="MENTION_REQUEST_PENDING_V1" &&
-       format!=="MENTION_REQUEST_PENDING_V2" &&
-       format!=="MENTION_REQUEST_PENDING_V3"){
-        throw new Error("一時ファイルの形式が不正です："+fso.GetFileName(filePath));
-    }
-
-    if(!data.baseName){
-        throw new Error("拠点情報がありません："+fso.GetFileName(filePath));
-    }
-
-    if(data.lines.length===0){
-        throw new Error("CSV書き込みデータがありません："+fso.GetFileName(filePath));
-    }
-
-    return data;
 }
 
 function ensureFolder(fso,folderPath){
@@ -1500,11 +1367,7 @@ function ensureFolder(fso,folderPath){
 }
 
 function makeHeaderLine(){
-    return csvJoin([
-        "送信日時","RequestID","拠点","依頼者","依頼番号",
-        "組織","CA名","代理CA組織","代理CA1","代理CA2","代理CA3",
-        "メールメモ","処理日時","期日","時短","至急","タイプ"
-    ]);
+    return "送信日時,RequestID,拠点,依頼者,依頼番号,組織,CA名,代理CA組織,代理CA1,代理CA2,代理CA3,メールメモ,処理日時,期日,時短,至急,タイプ";
 }
 
 function makeCsvLine(requestId,sentAt,baseName,requester,req){
