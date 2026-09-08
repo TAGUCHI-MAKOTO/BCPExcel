@@ -2,16 +2,18 @@
 var PENDING_FOLDER_NAME = "MentionRequest_Pending";
 var BACKGROUND_WORKER_NAME = "mention-request-worker.js";
 var WORKER_MAX_RETRY_SECONDS = 300;
+var activeCompletionReadyPath = "";
+var completionReadySignaled = false;
 
 
 /* =========================================================
-   受付後最小化＋実書き込みテスト
+   v28.12 選択肢マスタJS集約＋受付後最小化＋即時書き込み＋標準完了Popup
    ・Pending保存後すぐWorkerを起動
-   ・新規送信だけ共有CSV書き込み開始を10秒遅延
-   ・受付モーダルOK押下後、フォームを最小化
-   ・共有CSV反映＋検証＋Pending削除後はWorkerが完了通知
+   ・共有CSVへの書き込みは待機なしで即時開始
+   ・受付はメインHTA内モーダルで表示
+   ・OK押下またはフォーム終了を合図に、完了時はWindows標準Popupを表示
+   ・フォームを閉じてもWorkerと完了通知は継続
    ========================================================= */
-var NEW_SEND_WRITE_DELAY_MS = 10000;
 
 function showAcceptedAndPrepareMinimize(){
     var button=$("systemModalOkButton");
@@ -29,6 +31,8 @@ function showAcceptedAndPrepareMinimize(){
 }
 
 function confirmAcceptedAndMinimize(){
+    // Worker側の完了Popupを表示してよいタイミングを通知してから最小化する。
+    signalCompletionNotificationReady();
     hideSystemModal();
 
     // 受付後に入力欄を初期化。拠点・依頼者は既存仕様どおり維持。
@@ -67,6 +71,14 @@ function confirmAcceptedAndMinimize(){
     },150);
 }
 
+var BASE_OPTIONS = [
+    "",
+    "首都圏",
+    "札幌",
+    "新潟",
+    "呉服"
+];
+
 var TYPE_OPTIONS = [
     "",
     "① 通常対応",
@@ -97,6 +109,13 @@ var screenWatchTimer = null;
 function $(id){ return document.getElementById(id); }
 
 function initApp(){
+    // 受付モーダルのOKを押さずにフォームを閉じた場合も、
+    // Workerへ「完了通知を表示してよい」ことを伝える。
+    window.onunload=function(){
+        signalCompletionNotificationReady();
+    };
+
+    populateBases();
     populateTypes();
     setRequesterName();
 
@@ -164,6 +183,21 @@ function setRequesterName(){
         if(el){
             el.innerText=userName||"取得できませんでした";
         }
+    }
+}
+
+function populateBases(){
+    var i,sel,opt;
+    sel=$("requestBase");
+    if(!sel){ return; }
+
+    while(sel.options.length>0){ sel.remove(0); }
+
+    for(i=0;i<BASE_OPTIONS.length;i++){
+        opt=document.createElement("option");
+        opt.value=BASE_OPTIONS[i];
+        opt.text=(BASE_OPTIONS[i]==="" ? "選択してください" : BASE_OPTIONS[i]);
+        sel.add(opt);
     }
 }
 
@@ -597,7 +631,6 @@ function clearSameCAFields(no){
     }
 
     clearErrors();
-
     try{
         $("org"+no).focus();
     }catch(err){
@@ -766,11 +799,17 @@ function sendRequest(){
             csvFolder
         );
 
+        // 完了通知用の合図ファイル。Workerはこのファイルが作成されるまで
+        // 完了HTAの表示を待つため、受付モーダルとの二重表示を防げる。
+        activeCompletionReadyPath=pendingPath+".notify-ready";
+        completionReadySignaled=false;
+        removeCompletionReadyMarkerIfExists();
+
         beginPendingState("sending");
 
-        // 2. 新規送信は「送信ボタン押下から約10秒後」まで
-        //    共有CSVへの書き込み開始を待たせる。
-        var notBeforeMs=(new Date()).getTime()+NEW_SEND_WRITE_DELAY_MS;
+        // 2. v28.7: 新規送信も待機なし。
+        //    Worker起動後、共有CSVへの書き込みを即時開始する。
+        var notBeforeMs=0;
 
         // 3. Workerは先に別プロセス起動。
         //    フォームを閉じてもWorker自体は継続する。
@@ -1020,12 +1059,19 @@ function setChecked(id,value){
 
 
 
+
 function hideSystemModal(){
     var overlay=$("systemModalOverlay");
 
     if(overlay){
         overlay.className="system-modal-overlay hidden";
     }
+}
+
+function isSystemModalVisible(){
+    var overlay=$("systemModalOverlay");
+    if(!overlay){ return false; }
+    return String(overlay.className||"").indexOf("hidden")<0;
 }
 
 function showSystemModal(title,message,kind,showButton){
@@ -1206,10 +1252,12 @@ function updatePendingRetryUI(){
 
     // 送信・再送していたPendingが消えた＝worker側で処理完了
     if(count<=0){
+        var completedState=pendingRetryState;
+
         if(
-            pendingRetryState==="sending" ||
-            pendingRetryState==="auto" ||
-            pendingRetryState==="manual"
+            completedState==="sending" ||
+            completedState==="auto" ||
+            completedState==="manual"
         ){
             pendingRetryState="";
             pendingRetryStartedAt=0;
@@ -1361,10 +1409,11 @@ function launchBackgroundWorker(pendingPath,csvFolderFallback,notBeforeMs){
     }
 
     /*
-      v28.3ベース:
+      v28.11:
       Pure JScript Workerを別プロセスで非同期起動。
-      第3引数がある新規送信のみ、指定時刻まで共有CSV書き込みを待機する。
-      起動時復旧・手動再送は第3引数なしのため即時処理。
+      受付OKまたはフォーム終了後、書き込み完了時に
+      WorkerからWindows標準Popupを表示する。
+      第3引数は互換性のため残すが、通常は0を渡して即時処理する。
     */
     var command=
         "wscript.exe //NoLogo //E:JScript "+
@@ -1490,6 +1539,33 @@ function pad2(n){ return n<10?"0"+n:String(n); }
 
 function sanitizeFileName(name){
     return String(name||"未選択").replace(/[\\\/:*?"<>|]/g,"_");
+}
+
+function removeCompletionReadyMarkerIfExists(){
+    if(!activeCompletionReadyPath){return;}
+
+    try{
+        var fso=new ActiveXObject("Scripting.FileSystemObject");
+        if(fso.FileExists(activeCompletionReadyPath)){
+            fso.DeleteFile(activeCompletionReadyPath,true);
+        }
+    }catch(err){}
+}
+
+function signalCompletionNotificationReady(){
+    if(!activeCompletionReadyPath || completionReadySignaled){
+        return;
+    }
+
+    try{
+        var fso=new ActiveXObject("Scripting.FileSystemObject");
+        var file=fso.CreateTextFile(activeCompletionReadyPath,true,false);
+        file.WriteLine("ready");
+        file.Close();
+        completionReadySignaled=true;
+    }catch(err){
+        // 完了通知用の合図に失敗しても、CSV送信処理自体には影響させない。
+    }
 }
 
 function setStatus(message){
