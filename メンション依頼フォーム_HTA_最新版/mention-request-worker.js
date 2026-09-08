@@ -56,16 +56,8 @@
         WScript.Quit(3);
     }
 
-    // New-send LT: wait until the absolute not-before time.
-    // Recovery/manual retry has no delay because arg 3 is zero/omitted.
-    while (notBeforeMs > 0 && new Date().getTime() < notBeforeMs) {
-        if (!fso.FileExists(pendingPath)) {
-            WScript.Quit(0);
-        }
-
-        var remaining = notBeforeMs - new Date().getTime();
-        WScript.Sleep(remaining > 250 ? 250 : remaining);
-    }
+    // v28.5: start shared-CSV processing immediately.
+    // The third argument is still accepted for compatibility, but no LT delay is applied.
 
     var pending;
     try {
