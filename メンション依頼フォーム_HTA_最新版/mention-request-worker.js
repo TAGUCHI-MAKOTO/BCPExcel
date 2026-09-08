@@ -8,6 +8,9 @@
     var RETRY_MAX_MS = 1250;
     var MAX_RETRY_MS = 300000;
     var STALE_LOCK_MS = 600000;
+    var COMPLETION_READY_SUFFIX = ".notify-ready";
+    var COMPLETION_READY_MAX_MS = 30000;
+    var COMPLETION_READY_POLL_MS = 200;
 
     var HEADER = [
         "\u9001\u4fe1\u65e5\u6642",
@@ -92,8 +95,8 @@
             // Keep the shared lock until Pending deletion completes.
             // This prevents duplicate success popups from concurrent workers.
             if (deletePendingWithRetry(pendingPath)) {
-                showSuccessPopup(pending);
                 releaseLock(lockPath);
+                showSuccessPopupWhenReady(pendingPath);
                 WScript.Quit(0);
             }
 
@@ -384,19 +387,43 @@
     }
 
 
-    function showSuccessPopup(pending) {
+    function showSuccessPopupWhenReady(pendingPath) {
+        var readyPath = String(pendingPath || "") + COMPLETION_READY_SUFFIX;
+        var startedAt = new Date().getTime();
+
+        while (!fso.FileExists(readyPath) &&
+               (new Date().getTime() - startedAt) < COMPLETION_READY_MAX_MS) {
+            WScript.Sleep(COMPLETION_READY_POLL_MS);
+        }
+
+        showSuccessPopup();
+
+        try {
+            if (fso.FileExists(readyPath)) {
+                fso.DeleteFile(readyPath, true);
+            }
+        } catch (e) {
+        }
+    }
+
+
+    function showSuccessPopup() {
         try {
             var message =
                 "\u30e1\u30f3\u30b7\u30e7\u30f3\u4f9d\u983c\u306e\u9001\u4fe1\u304c\u5b8c\u4e86\u3057\u307e\u3057\u305f\u3002" +
-                "\r\n" +
-                "\u62e0\u70b9\uff1a" + String(pending.baseName || "");
+                "\r\n\r\n" +
+                "\u5171\u6709CSV\u3078\u306e\u66f8\u304d\u8fbc\u307f\u3068\u78ba\u8a8d\u304c\u5b8c\u4e86\u3057\u3066\u3044\u307e\u3059\u3002";
 
-            // 5 seconds, information icon. Auto-closes if untouched.
+            // Timeout 0: keep the completion notice visible until OK is pressed.
+            // 64      = MB_ICONINFORMATION
+            // 65536   = MB_SETFOREGROUND
+            // 262144  = MB_TOPMOST
+            // This brings the completion notice to the front even when the main HTA is minimized.
             shell.Popup(
                 message,
-                5,
-                "\u30e1\u30f3\u30b7\u30e7\u30f3\u4f9d\u983c\u30d5\u30a9\u30fc\u30e0",
-                64
+                0,
+                "\u30e1\u30f3\u30b7\u30e7\u30f3\u4f9d\u983c\u30d5\u30a9\u30fc\u30e0 | \u9001\u4fe1\u5b8c\u4e86",
+                327744
             );
         } catch (e) {
             // Notification failure must never affect CSV delivery.
