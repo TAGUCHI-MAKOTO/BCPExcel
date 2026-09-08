@@ -3,6 +3,70 @@ var PENDING_FOLDER_NAME = "MentionRequest_Pending";
 var BACKGROUND_WORKER_NAME = "mention-request-worker.js";
 var WORKER_MAX_RETRY_SECONDS = 300;
 
+
+/* =========================================================
+   受付後最小化＋実書き込みテスト
+   ・Pending保存後すぐWorkerを起動
+   ・新規送信だけ共有CSV書き込み開始を10秒遅延
+   ・受付モーダルOK押下後、フォームを最小化
+   ・共有CSV反映＋検証＋Pending削除後はWorkerが完了通知
+   ========================================================= */
+var NEW_SEND_WRITE_DELAY_MS = 10000;
+
+function showAcceptedAndPrepareMinimize(){
+    var button=$("systemModalOkButton");
+
+    if(button){
+        button.onclick=confirmAcceptedAndMinimize;
+    }
+
+    showSystemModal(
+        "依頼を受け付けました",
+        "送信処理を開始しました。\n\nOKを押すとフォームを最小化します。",
+        "accepted",
+        true
+    );
+}
+
+function confirmAcceptedAndMinimize(){
+    hideSystemModal();
+
+    // 受付後に入力欄を初期化。拠点・依頼者は既存仕様どおり維持。
+    resetAfterSend();
+    setStatus("送信中です…");
+
+    // HTML Help ActiveX Control の Minimize コマンドで
+    // 現在のHTAウィンドウを直接最小化する。
+    window.setTimeout(function(){
+        var minimized=false;
+
+        try{
+            var ctrl=$("HHCtrlMinimizeWindowObject");
+            if(ctrl){
+                ctrl.Click();
+                minimized=true;
+            }
+        }catch(minErr){}
+
+        // ActiveX Controlが利用できない環境のみフォールバック。
+        if(!minimized){
+            try{
+                var shell=new ActiveXObject("WScript.Shell");
+                try{
+                    shell.AppActivate(document.title);
+                }catch(activateErr){}
+
+                shell.SendKeys("% ");
+                window.setTimeout(function(){
+                    try{
+                        shell.SendKeys("n");
+                    }catch(keyErr2){}
+                },180);
+            }catch(keyErr1){}
+        }
+    },150);
+}
+
 var TYPE_OPTIONS = [
     "",
     "① 通常対応",
@@ -689,10 +753,9 @@ function sendRequest(){
     }
 
     try{
-        // 本番CSV格納先はプログラム内の固定パスを使用
         var csvFolder=getProductionCsvFolder(true);
 
-        // ① まずPendingへ確実に保存
+        // 1. まずPendingへ保存。
         pendingPath=savePendingPackage(
             baseName,
             requester,
@@ -703,26 +766,25 @@ function sendRequest(){
             csvFolder
         );
 
-        // Pending保存後は送信ボタンを隠し、メッセージのみ表示
         beginPendingState("sending");
 
-        // ② 別プロセスのworkerへ引き渡す
-        launchBackgroundWorker(pendingPath,csvFolder);
+        // 2. 新規送信は「送信ボタン押下から約10秒後」まで
+        //    共有CSVへの書き込み開始を待たせる。
+        var notBeforeMs=(new Date()).getTime()+NEW_SEND_WRITE_DELAY_MS;
 
-        // ③ ここからHTAを閉じてもworkerは継続
-        resetAfterSend();
+        // 3. Workerは先に別プロセス起動。
+        //    フォームを閉じてもWorker自体は継続する。
+        launchBackgroundWorker(pendingPath,csvFolder,notBeforeMs);
 
-        // 受付完了モーダルは表示しない。
-        // footerの送信状態表示で処理状況を伝える。
+        // 4. 受付完了を表示。OKでフォーム最小化。
+        showAcceptedAndPrepareMinimize();
 
     }catch(err){
         if(pendingPath && getPendingCount()>0){
-            // Pending保存後にworker起動などで失敗した場合は再送待ちへ
             pendingRetryState="failed";
             pendingRetryStartedAt=0;
             updatePendingRetryUI();
         }else{
-            // Pending自体を保存できなかった場合は通常の送信ボタンへ戻す
             pendingRetryState="";
             pendingRetryStartedAt=0;
             updatePendingRetryUI();
@@ -1277,7 +1339,7 @@ function retryPendingPackages(){
     }
 }
 
-function launchBackgroundWorker(pendingPath,csvFolderFallback){
+function launchBackgroundWorker(pendingPath,csvFolderFallback,notBeforeMs){
     var fso=new ActiveXObject("Scripting.FileSystemObject");
     var shell=new ActiveXObject("WScript.Shell");
     var workerPath=getCurrentFolderPath()+"\\"+BACKGROUND_WORKER_NAME;
@@ -1293,19 +1355,23 @@ function launchBackgroundWorker(pendingPath,csvFolderFallback){
     }
 
     csvFolderFallback=String(csvFolderFallback||"");
+    notBeforeMs=parseInt(notBeforeMs,10);
+    if(isNaN(notBeforeMs) || notBeforeMs<0){
+        notBeforeMs=0;
+    }
 
     /*
-      v28.3:
-      PowerShellを完全廃止。WorkerはASCIIのみで構成。
-      完了ポップアップ表示のため、wscript.exe の //B を廃止。
-      WSH(JScript) Workerを別プロセスで非同期起動する。
-      HTAを閉じてもWorkerは継続する。
+      v28.3ベース:
+      Pure JScript Workerを別プロセスで非同期起動。
+      第3引数がある新規送信のみ、指定時刻まで共有CSV書き込みを待機する。
+      起動時復旧・手動再送は第3引数なしのため即時処理。
     */
     var command=
         "wscript.exe //NoLogo //E:JScript "+
         quoteCommandArgument(workerPath)+" "+
         quoteCommandArgument(pendingPath)+" "+
-        quoteCommandArgument(csvFolderFallback);
+        quoteCommandArgument(csvFolderFallback)+" "+
+        quoteCommandArgument(String(notBeforeMs));
 
     var result=shell.Run(command,0,false);
 

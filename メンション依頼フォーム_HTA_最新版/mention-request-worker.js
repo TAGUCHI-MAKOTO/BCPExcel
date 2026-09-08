@@ -39,6 +39,14 @@
 
     var pendingPath = String(args.Item(0) || "");
     var csvFolder = String(args.Item(1) || "");
+    var notBeforeMs = 0;
+
+    if (args.length >= 3) {
+        notBeforeMs = parseInt(String(args.Item(2) || "0"), 10);
+        if (isNaN(notBeforeMs) || notBeforeMs < 0) {
+            notBeforeMs = 0;
+        }
+    }
 
     if (!pendingPath || !fso.FileExists(pendingPath)) {
         WScript.Quit(0);
@@ -46,6 +54,17 @@
 
     if (!csvFolder || !fso.FolderExists(csvFolder)) {
         WScript.Quit(3);
+    }
+
+    // New-send LT: wait until the absolute not-before time.
+    // Recovery/manual retry has no delay because arg 3 is zero/omitted.
+    while (notBeforeMs > 0 && new Date().getTime() < notBeforeMs) {
+        if (!fso.FileExists(pendingPath)) {
+            WScript.Quit(0);
+        }
+
+        var remaining = notBeforeMs - new Date().getTime();
+        WScript.Sleep(remaining > 250 ? 250 : remaining);
     }
 
     var pending;
