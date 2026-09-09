@@ -463,6 +463,8 @@ function hasAnyInput(req){
 function validateForm(){
     var i;
 
+    // 送信直前にも、同一CAを依頼1→2→3の順に一致させる。
+    syncSameCARequests();
     clearErrors();
 
     // 表示中の依頼を、画面左→右の順番でチェック
@@ -534,24 +536,8 @@ function validateRequestSection(i){
 
 
 function clearRequest(no){
-    var ids=["org"+no,"ca"+no,"proxyOrg"+no,"proxyCA"+no+"_1","proxyCA"+no+"_2","proxyCA"+no+"_3","mailMemo"+no,"processedAt"+no,"dueDate"+no];
-    var i,el;
-
-    if(no===2 || no===3){
-        el=$("sameCA"+no);
-        if(el){ el.checked=false; }
-        setSameCAFieldsLocked(no,false);
-        updateSameCALabel(no,false);
-    }
-
-    for(i=0;i<ids.length;i++){
-        el=$(ids[i]);
-        if(el){ el.value=""; }
-    }
-
-    el=$("type"+no); if(el){ el.selectedIndex=0; }
-    el=$("short"+no); if(el){ el.checked=false; }
-    el=$("urgent"+no); if(el){ el.checked=false; }
+    clearRequestFields(no);
+    syncSameCARequests();
 
     clearErrors();
     try{$("org"+no).focus();}catch(err){}
@@ -596,6 +582,13 @@ function updateSameCALabel(no,on){
     }
 }
 
+function resetSameCAState(no){
+    if(no!==2 && no!==3){ return; }
+    setChecked("sameCA"+no,false);
+    setSameCAFieldsLocked(no,false);
+    updateSameCALabel(no,false);
+}
+
 function toggleSameCA(no){
     var box=$("sameCA"+no);
     if(!box){return;}
@@ -610,6 +603,9 @@ function toggleSameCA(no){
         clearSameCAFields(no);
         updateSameCALabel(no,false);
     }
+
+    // valueの書き換えではinput/changeが発生しないため、後続にも明示反映。
+    syncSameCARequests();
 }
 
 function clearSameCAFields(no){
@@ -642,21 +638,26 @@ function syncSameCATarget(no){
     if(box&&box.checked){ copySameCAValues(no); }
 }
 
+function syncSameCARequests(){
+    // 依頼2を先に更新してから、その内容を依頼3へ反映する。
+    syncSameCATarget(2);
+    syncSameCATarget(3);
+}
+
 function bindSameCASync(){
     var src1=["org1","ca1","proxyOrg1","proxyCA1_1","proxyCA1_2","proxyCA1_3"];
     var src2=["org2","ca2","proxyOrg2","proxyCA2_1","proxyCA2_2","proxyCA2_3"];
     var i;
 
-    for(i=0;i<src1.length;i++){ bindSameCAEvent(src1[i],2); }
-    for(i=0;i<src2.length;i++){ bindSameCAEvent(src2[i],3); }
+    for(i=0;i<src1.length;i++){ bindSameCAEvent(src1[i]); }
+    for(i=0;i<src2.length;i++){ bindSameCAEvent(src2[i]); }
 }
 
-function bindSameCAEvent(id,targetNo){
+function bindSameCAEvent(id){
     var el=$(id);
     if(!el){return;}
     var fn=function(){
-        syncSameCATarget(targetNo);
-        if(targetNo===2){ syncSameCATarget(3); }
+        syncSameCARequests();
     };
     if(el.addEventListener){
         el.addEventListener("input",fn,false);
@@ -963,6 +964,8 @@ function cancelRequest(no){
 }
 
 function copyRequestFields(fromNo,toNo){
+    // 繰り上げた依頼は入力内容を保持し、取り消した依頼のCA連動を引き継がない。
+    resetSameCAState(toNo);
     setValue("org"+toNo,val("org"+fromNo));
     setValue("ca"+toNo,val("ca"+fromNo));
     setValue("proxyOrg"+toNo,val("proxyOrg"+fromNo));
@@ -992,6 +995,8 @@ function addHiddenClass(id){
 }
 
 function clearRequestFields(i){
+    // 取り消し・送信後の初期化でもチェック状態と入力ロックを残さない。
+    resetSameCAState(i);
     setValue("org"+i,"");
     setValue("ca"+i,"");
     setValue("proxyOrg"+i,"");
