@@ -116,7 +116,6 @@ select:focus {
 /* V9比率をほぼそのまま拡大 */
 .org,
 .ca,
-.proxy-org,
 .proxy-ca {
     width: 192px;
 }
@@ -169,8 +168,13 @@ select:focus {
 
 
 .option-zone {
-    width: 172px;
-    margin-left: 10px;
+    width: 105px;
+    margin-left: 0;
+    margin-right: 8px;
+}
+
+.option-inline {
+    box-sizing: border-box;
 }
 
 .checkline {
@@ -601,8 +605,6 @@ button {
 
 
 
-
-
 /* v7: 配置・サイズ統一 */
 .clear-request-button{
     margin-left:0;
@@ -634,6 +636,21 @@ button {
 
 .card-action-row button:first-child{
     margin-left:0;
+}
+
+.input-note{
+    position:absolute;
+    left:28px;
+    bottom:10px;
+    color:#6b4f5d;
+    font-size:16px;
+    line-height:1.45;
+    white-space:nowrap;
+}
+
+.input-note-title{
+    margin-bottom:1px;
+    font-weight:bold;
 }
 
 
@@ -897,7 +914,6 @@ select:focus{
 .system-modal-accepted #systemModalMessage{
     color:#3f3554 !important;
 }
-
 .system-modal-accepted .system-modal-button,
 .system-modal-accepted #systemModalOkButton{
     background:#7656b5 !important;
@@ -910,3 +926,72 @@ select:focus{
     background:#6748a5 !important;
 }
 
+
+/* =========================================================
+   v28.16: 入力欄・リスト・操作ボタンの列と右端を統一
+   HTA / IE11向けに既存のfloat・inline-block配置を維持。
+   ========================================================= */
+
+#app{
+    width:1480px;
+    min-width:1480px;
+    max-width:1480px;
+}
+
+.field{
+    margin-right:10px;
+}
+
+.org,
+.ca,
+.proxy-ca{
+    width:190px;
+}
+
+.option-zone{
+    width:95px;
+    margin-left:0;
+    margin-right:10px;
+}
+
+/* 左側は (190 + 10) × 3 + (95 + 10) = 705px。 */
+.detail-zone{
+    float:right;
+    width:calc(100% - 705px);
+}
+
+.detail-top,
+.type-area{
+    width:100%;
+}
+
+/* 入力欄とボタンを同じ3列・列間10pxで配置する。 */
+.detail-top .field{
+    width:calc((100% - 20px) / 3);
+}
+
+.detail-top .due{
+    margin-right:0;
+}
+
+.card-action-row{
+    left:733px; /* カード左余白28px + 左側705px */
+    right:20px;
+    width:auto;
+    font-size:0; /* inline-block間の改行・空白による余白をなくす */
+}
+
+.card-action-row button{
+    width:calc((100% - 20px) / 3);
+    margin:0 0 0 10px;
+    font-size:16px;
+}
+
+.card-action-row button:first-child{
+    margin-left:0;
+}
+
+/* カード内の右余白20pxに合わせ、送信ボタンの右端も統一。 */
+#footerBar{
+    padding-right:20px;
+}
