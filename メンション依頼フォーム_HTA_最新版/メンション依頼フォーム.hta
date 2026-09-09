@@ -64,6 +64,78 @@ End Function
 </script>
 
 <script type="text/javascript" src="mention-form.js"></script>
+<script type="text/javascript">
+/* v28.16 Layout Fix compatibility overrides.
+   The layout package is based on the v28.15 UI where proxy organization is removed,
+   proxy CA is optional, and the input note follows the same-CA checkbox. */
+function collectRequest(no){
+    return {
+        requestNo:no,
+        organization:val("org"+no),
+        caName:val("ca"+no),
+        proxyOrganization:"",
+        proxyCA1:val("proxyCA"+no+"_1"),
+        proxyCA2:val("proxyCA"+no+"_2"),
+        proxyCA3:val("proxyCA"+no+"_3"),
+        mailMemo:val("mailMemo"+no),
+        processedAt:val("processedAt"+no),
+        dueDate:val("dueDate"+no),
+        shortTime:checked("short"+no),
+        urgent:checked("urgent"+no),
+        type:val("type"+no)
+    };
+}
+
+function validateRequestSection(i){
+    if(!trimValue("org"+i)){
+        markError("org"+i);
+        showValidationModal(i,"依頼"+i+"：組織を入力してください","org"+i);
+        return false;
+    }
+    if(!trimValue("ca"+i)){
+        markError("ca"+i);
+        showValidationModal(i,"依頼"+i+"：CA名を入力してください","ca"+i);
+        return false;
+    }
+    if(!trimValue("mailMemo"+i)){
+        markError("mailMemo"+i);
+        showValidationModal(i,"依頼"+i+"：メールメモを入力してください","mailMemo"+i);
+        return false;
+    }
+    if(!trimValue("processedAt"+i)){
+        markError("processedAt"+i);
+        showValidationModal(i,"依頼"+i+"：処理日時を入力してください","processedAt"+i);
+        return false;
+    }
+    if(!trimValue("type"+i)){
+        markError("type"+i);
+        showValidationModal(i,"依頼"+i+"：タイプを選択してください","type"+i);
+        return false;
+    }
+    return true;
+}
+
+function updateInputNoteVisibility(no,on){
+    var note=$("inputNote"+no);
+    if(note){
+        note.style.display=on ? "none" : "block";
+    }
+}
+
+var toggleSameCABase=toggleSameCA;
+toggleSameCA=function(no){
+    toggleSameCABase(no);
+    updateInputNoteVisibility(no,checked("sameCA"+no));
+};
+
+var clearRequestBase=clearRequest;
+clearRequest=function(no){
+    clearRequestBase(no);
+    if(no===2 || no===3){
+        updateInputNoteVisibility(no,false);
+    }
+};
+</script>
 </head>
 
 <body onload="initApp();">
@@ -93,9 +165,10 @@ End Function
                     <input type="text" id="ca1">
                 </div>
 
-                <div class="field proxy-org">
-                    <label>代理CA組織</label>
-                    <input type="text" id="proxyOrg1">
+                <div class="option-zone option-inline">
+                    <label>オプション</label>
+                    <label class="checkline"><input type="checkbox" id="short1"> 時短</label>
+                    <label class="checkline"><input type="checkbox" id="urgent1"> 至急</label>
                 </div>
 
                 <div class="field proxy-ca">
@@ -129,11 +202,11 @@ End Function
                     </div>
                 </div>
 
-                <div class="option-zone">
-                    <label>オプション</label>
-                    <label class="checkline"><input type="checkbox" id="short1"> 時短</label>
-                    <label class="checkline"><input type="checkbox" id="urgent1"> 至急</label>
-                </div>
+            </div>
+
+            <div class="input-note" id="inputNote1">
+                <div class="input-note-title">＜入力時の注意事項＞</div>
+                <div>組織・CA名はCanvasからコピーしてください</div>
             </div>
 
             <div class="card-action-row">
@@ -164,9 +237,10 @@ End Function
                     <input type="text" id="ca2">
                 </div>
 
-                <div class="field proxy-org">
-                    <label>代理CA組織</label>
-                    <input type="text" id="proxyOrg2">
+                <div class="option-zone option-inline">
+                    <label>オプション</label>
+                    <label class="checkline"><input type="checkbox" id="short2"> 時短</label>
+                    <label class="checkline"><input type="checkbox" id="urgent2"> 至急</label>
                 </div>
 
                 <div class="field proxy-ca">
@@ -200,11 +274,11 @@ End Function
                     </div>
                 </div>
 
-                <div class="option-zone">
-                    <label>オプション</label>
-                    <label class="checkline"><input type="checkbox" id="short2"> 時短</label>
-                    <label class="checkline"><input type="checkbox" id="urgent2"> 至急</label>
-                </div>
+            </div>
+
+            <div class="input-note" id="inputNote2">
+                <div class="input-note-title">＜入力時の注意事項＞</div>
+                <div>組織・CA名はCanvasからコピーしてください</div>
             </div>
 
             <div class="card-action-row">
@@ -236,9 +310,10 @@ End Function
                     <input type="text" id="ca3">
                 </div>
 
-                <div class="field proxy-org">
-                    <label>代理CA組織</label>
-                    <input type="text" id="proxyOrg3">
+                <div class="option-zone option-inline">
+                    <label>オプション</label>
+                    <label class="checkline"><input type="checkbox" id="short3"> 時短</label>
+                    <label class="checkline"><input type="checkbox" id="urgent3"> 至急</label>
                 </div>
 
                 <div class="field proxy-ca">
@@ -273,11 +348,11 @@ End Function
 
                 </div>
 
-                <div class="option-zone">
-                    <label>オプション</label>
-                    <label class="checkline"><input type="checkbox" id="short3"> 時短</label>
-                    <label class="checkline"><input type="checkbox" id="urgent3"> 至急</label>
-                </div>
+            </div>
+
+            <div class="input-note" id="inputNote3">
+                <div class="input-note-title">＜入力時の注意事項＞</div>
+                <div>組織・CA名はCanvasからコピーしてください</div>
             </div>
 
             <div class="card-action-row">
