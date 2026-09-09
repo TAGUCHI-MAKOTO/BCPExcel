@@ -948,13 +948,18 @@ select:focus{
     width:190px;
 }
 
-.option-zone{
-    width:95px;
-    margin-left:0;
-    margin-right:10px;
+/* v28.20: オプションとの間に少し余裕を持たせるため、代理CA名だけ8px右へ。 */
+.proxy-ca{
+    margin-left:8px;
 }
 
-/* 左側は (190 + 10) × 3 + (95 + 10) = 705px。 */
+.option-zone{
+    width:80px;
+    margin-left:0;
+    margin-right:5px;
+}
+
+/* v28.19: detail-zoneの開始位置705pxは維持。オプション幅だけ縮め、代理CA名を左へ寄せて右側に余白を確保。 */
 .detail-zone{
     float:right;
     width:calc(100% - 705px);

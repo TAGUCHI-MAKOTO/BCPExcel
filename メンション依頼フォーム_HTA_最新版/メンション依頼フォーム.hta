@@ -65,9 +65,8 @@ End Function
 
 <script type="text/javascript" src="mention-form.js"></script>
 <script type="text/javascript">
-/* v28.16 Layout Fix compatibility overrides.
-   The layout package is based on the v28.15 UI where proxy organization is removed,
-   proxy CA is optional, and the input note follows the same-CA checkbox. */
+/* v28.20 compatibility patch: keep the repository JS split while applying
+   proxy-CA optional behavior and note visibility from the approved build. */
 function collectRequest(no){
     return {
         requestNo:no,
@@ -117,9 +116,7 @@ function validateRequestSection(i){
 
 function updateInputNoteVisibility(no,on){
     var note=$("inputNote"+no);
-    if(note){
-        note.style.display=on ? "none" : "block";
-    }
+    if(note){ note.style.display=on ? "none" : "block"; }
 }
 
 var toggleSameCABase=toggleSameCA;
@@ -131,9 +128,7 @@ toggleSameCA=function(no){
 var clearRequestBase=clearRequest;
 clearRequest=function(no){
     clearRequestBase(no);
-    if(no===2 || no===3){
-        updateInputNoteVisibility(no,false);
-    }
+    if(no===2 || no===3){ updateInputNoteVisibility(no,false); }
 };
 </script>
 </head>
@@ -167,8 +162,8 @@ clearRequest=function(no){
 
                 <div class="option-zone option-inline">
                     <label>オプション</label>
-                    <label class="checkline"><input type="checkbox" id="short1"> 時短</label>
                     <label class="checkline"><input type="checkbox" id="urgent1"> 至急</label>
+                    <label class="checkline"><input type="checkbox" id="short1"> 時短</label>
                 </div>
 
                 <div class="field proxy-ca">
@@ -239,8 +234,8 @@ clearRequest=function(no){
 
                 <div class="option-zone option-inline">
                     <label>オプション</label>
-                    <label class="checkline"><input type="checkbox" id="short2"> 時短</label>
                     <label class="checkline"><input type="checkbox" id="urgent2"> 至急</label>
+                    <label class="checkline"><input type="checkbox" id="short2"> 時短</label>
                 </div>
 
                 <div class="field proxy-ca">
@@ -312,8 +307,8 @@ clearRequest=function(no){
 
                 <div class="option-zone option-inline">
                     <label>オプション</label>
-                    <label class="checkline"><input type="checkbox" id="short3"> 時短</label>
                     <label class="checkline"><input type="checkbox" id="urgent3"> 至急</label>
+                    <label class="checkline"><input type="checkbox" id="short3"> 時短</label>
                 </div>
 
                 <div class="field proxy-ca">
