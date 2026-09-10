@@ -928,29 +928,30 @@ select:focus{
 
 
 /* =========================================================
-   v28.16: 入力欄・リスト・操作ボタンの列と右端を統一
+   v28.22: 見出し・入力欄・操作ボタンの間隔と右端を統一
    HTA / IE11向けに既存のfloat・inline-block配置を維持。
    ========================================================= */
 
 #app{
-    width:1480px;
-    min-width:1480px;
-    max-width:1480px;
+    width:1500px;
+    min-width:1500px;
+    max-width:1500px;
 }
 
 .field{
-    margin-right:10px;
+    margin-right:12px;
 }
 
 .org,
-.ca{
+.ca,
+.proxy-ca{
     width:160px;
 }
 
-/* v28.21: 出社状況と条件付きオプションの間に代理CA名を配置。 */
+/* 出社状況とオプションの間に代理CA名を配置。 */
 .proxy-ca{
-    width:170px;
     margin-left:0;
+    margin-right:32px;
 }
 
 .option-zone{
@@ -959,10 +960,10 @@ select:focus{
     margin-right:12px;
 }
 
-/* 左側840pxを確保し、右側の入力欄と操作ボタンの右端を揃える。 */
+/* 左側は (160 + 12) × 2 + (160 + 32) + (148 + 12) × 2 = 856px。 */
 .detail-zone{
     float:right;
-    width:calc(100% - 840px);
+    width:calc(100% - 856px);
 }
 
 .detail-top,
@@ -970,9 +971,9 @@ select:focus{
     width:100%;
 }
 
-/* 入力欄とボタンを同じ3列・列間10pxで配置する。 */
+/* 右側は190pxの3列・列間12px。送信ボタンとも右端・幅を揃える。 */
 .detail-top .field{
-    width:calc((100% - 20px) / 3);
+    width:calc((100% - 24px) / 3);
 }
 
 .detail-top .due{
@@ -980,15 +981,15 @@ select:focus{
 }
 
 .card-action-row{
-    left:868px; /* カード左余白28px + 左側840px */
+    left:884px; /* カード左余白28px + 左側856px */
     right:20px;
     width:auto;
     font-size:0; /* inline-block間の改行・空白による余白をなくす */
 }
 
 .card-action-row button{
-    width:calc((100% - 20px) / 3);
-    margin:0 0 0 10px;
+    width:calc((100% - 24px) / 3);
+    margin:0 0 0 12px;
     font-size:16px;
 }
 
@@ -996,13 +997,32 @@ select:focus{
     margin-left:0;
 }
 
-/* カード内の右余白20pxに合わせ、送信ボタンの右端も統一。 */
+/* フッターの左右をカードの入力欄に合わせる。 */
 #footerBar{
+    padding-left:28px;
     padding-right:20px;
 }
 
+.footer-field{
+    margin-right:12px;
+}
 
-/* v28.21: ラジオ・チェック項目の行高と見出しを統一。 */
+.section-title{
+    line-height:24px;
+}
+
+/* 見出しの高さを揃え、直下の入力欄が同じ位置から始まるようにする。 */
+.field > label:first-child,
+.attendance-zone .group-title,
+.option-zone > label:first-child,
+.type-area > label,
+.footer-field > label{
+    height:20px;
+    line-height:20px;
+    margin-bottom:4px;
+}
+
+/* ラジオ・チェック項目の中心を40pxのテキストボックスに合わせる。 */
 .attendance-zone{
     float:left;
     width:148px;
@@ -1017,20 +1037,20 @@ select:focus{
 }
 .attendance-zone .checkline,
 .option-zone .checkline{
-    margin:7px 0 0 0;
+    height:40px;
+    margin:0;
     font-size:14px;
-    line-height:24px;
+    line-height:40px;
     white-space:nowrap;
+}
+.attendance-zone .checkline + .checkline{
+    margin-top:8px;
 }
 .attendance-zone .checkline input,
 .option-zone .checkline input{
     width:18px;
     height:18px;
-    margin-right:3px;
-}
-.required-label{
-    font-size:11px;
-    color:#b84158;
+    margin:0 3px 0 0;
 }
 .attendance-zone.error-field{
     outline:2px solid #d64b4b;
