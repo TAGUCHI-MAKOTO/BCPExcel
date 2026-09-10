@@ -933,9 +933,9 @@ select:focus{
    ========================================================= */
 
 #app{
-    width:1480px;
-    min-width:1480px;
-    max-width:1480px;
+    width:1500px;
+    min-width:1500px;
+    max-width:1500px;
 }
 
 .field{
@@ -951,6 +951,7 @@ select:focus{
 /* 出社状況とオプションの間に代理CA名を配置。 */
 .proxy-ca{
     margin-left:0;
+    margin-right:32px;
 }
 
 .option-zone{
@@ -959,10 +960,10 @@ select:focus{
     margin-right:12px;
 }
 
-/* 左側は (160 + 12) × 3 + (148 + 12) × 2 = 836px。 */
+/* 左側は (160 + 12) × 2 + (160 + 32) + (148 + 12) × 2 = 856px。 */
 .detail-zone{
     float:right;
-    width:calc(100% - 836px);
+    width:calc(100% - 856px);
 }
 
 .detail-top,
@@ -980,7 +981,7 @@ select:focus{
 }
 
 .card-action-row{
-    left:864px; /* カード左余白28px + 左側836px */
+    left:884px; /* カード左余白28px + 左側856px */
     right:20px;
     width:auto;
     font-size:0; /* inline-block間の改行・空白による余白をなくす */
