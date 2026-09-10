@@ -1065,6 +1065,29 @@ select:focus{
     height:17px;
     margin-right:3px;
 }
+/* 送信前確認：依頼カードごとのCA名・出社状況・メールメモを見やすく表示。 */
+.send-confirm-modal{
+    width:760px;
+    min-height:270px;
+    /* JSが動く前でもフォーム中央付近に来るようフォールバックを設定。 */
+    margin-left:-380px;
+    margin-top:-135px;
+}
+
 .send-confirm-modal .modal-message{
+    min-height:145px;
+    padding:20px 28px 10px 28px;
+    text-align:left;
+}
+
+.send-confirm-question{
+    margin-bottom:16px;
     text-align:center;
+}
+
+.send-confirm-details{
+    line-height:1.8;
+    text-align:left;
+    white-space:pre-line;
+    word-break:break-all;
 }

@@ -1,4 +1,4 @@
-﻿// v28.22: オプション見出しを常時表示し、必須ラベルを削除
+﻿// v28.22: オプション見出し常時表示・必須ラベル削除・送信前確認に依頼内容を表示
 var CSV_SUBFOLDER_NAME = "書き込み用";
 var PENDING_FOLDER_NAME = "MentionRequest_Pending";
 var BACKGROUND_WORKER_NAME = "mention-request-worker.js";
@@ -804,10 +804,50 @@ function trimValue(id){
 
 var sendConfirmationOpen=false;
 
+function buildSendConfirmDetails(){
+    var lines=[];
+    var i;
+
+    // 同一CA連動中でも、現在の各依頼カードの値を依頼ごとに表示する。
+    syncAllSameCA();
+
+    for(i=1;i<=visibleRequestCount;i++){
+        lines.push(
+            "依頼"+i+"　"+trimValue("ca"+i)+"CA："+getAttendance(i)+
+            "　メールメモ："+trimValue("mailMemo"+i)
+        );
+    }
+
+    return lines.join("\r\n");
+}
+
+function updateSendConfirmDetails(){
+    var details=$("sendConfirmDetails");
+    if(details){
+        details.innerText=buildSendConfirmDetails();
+    }
+}
+
+function centerSendConfirmModal(){
+    var modal=$("sendConfirmModal");
+    if(!modal){ return; }
+
+    // 表示内容が1～3件で高さが変わっても、実寸を基準に画面中央へ配置する。
+    modal.style.left="50%";
+    modal.style.top="50%";
+    modal.style.marginLeft=String(-Math.round(modal.offsetWidth/2))+"px";
+    modal.style.marginTop=String(-Math.round(modal.offsetHeight/2))+"px";
+}
+
 function sendRequest(){
     if(sendConfirmationOpen || !validateForm()){ return; }
+
+    // 送信前確認に、表示中の依頼カードごとのCA名・出社状況・メールメモを表示。
+    updateSendConfirmDetails();
+
     sendConfirmationOpen=true;
     $("sendConfirmOverlay").className="modal-overlay";
+    centerSendConfirmModal();
     focusField("sendConfirmNo");
 }
 
@@ -1572,17 +1612,22 @@ function ensureFolder(fso,folderPath){
 }
 
 function makeHeaderLine(){
-    return "送信日時,RequestID,拠点,依頼者,依頼番号,組織,CA名,代理CA組織,代理CA1,代理CA2,代理CA3,メールメモ,処理日時,期日,時短,至急,タイプ";
+    return "送信日時,RequestID,拠点,依頼者,依頼番号,組織,CA名,出社状況,代理CA1,代理CA2,代理CA3,オプション,メールメモ,処理日時,期日または面接日程,タイプ";
+}
+
+function getCsvOptionValue(req){
+    if(req.urgent){ return "至急"; }
+    if(req.noProxy){ return "代理CA記載なし"; }
+    return "";
 }
 
 function makeCsvLine(requestId,sentAt,baseName,requester,req){
     return csvJoin([
         sentAt,requestId,baseName,requester,String(req.requestNo),
-        req.organization,req.caName,req.proxyOrganization,
+        req.organization,req.caName,req.attendance,
         req.proxyCA1,req.proxyCA2,req.proxyCA3,
+        getCsvOptionValue(req),
         req.mailMemo,req.processedAt,req.dueDate,
-        req.shortTime?"●":"",
-        req.urgent?"●":"",
         req.type
     ]);
 }

@@ -337,9 +337,12 @@ End Function
 
 
 <div id="sendConfirmOverlay" class="modal-overlay hidden" onkeydown="handleSendConfirmKey(event);">
-    <div class="validation-modal modal-neutral send-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="sendConfirmTitle" aria-describedby="sendConfirmMessage">
+    <div id="sendConfirmModal" class="validation-modal modal-neutral send-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="sendConfirmTitle" aria-describedby="sendConfirmMessage">
         <div id="sendConfirmTitle" class="modal-title">送信前確認</div>
-        <div id="sendConfirmMessage" class="modal-message">出社状況は相違ないですか？</div>
+        <div id="sendConfirmMessage" class="modal-message">
+            <div class="send-confirm-question">出社状況は相違ないですか？</div>
+            <div id="sendConfirmDetails" class="send-confirm-details"></div>
+        </div>
         <div class="cancel-modal-actions">
             <button type="button" id="sendConfirmYes" class="modal-ok" onclick="confirmSendRequest();">はい</button>
             <button type="button" id="sendConfirmNo" class="cancel-modal-back" onclick="closeSendConfirm();">いいえ</button>

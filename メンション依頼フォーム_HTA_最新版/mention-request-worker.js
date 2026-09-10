@@ -11,8 +11,28 @@
     var COMPLETION_READY_SUFFIX = ".notify-ready";
     var COMPLETION_READY_MAX_MS = 30000;
     var COMPLETION_READY_POLL_MS = 200;
+    var FAILURE_READY_RECENT_MS = 60000;
 
-    var HEADER = [
+    var HEADER_LATEST = [
+        "\u9001\u4fe1\u65e5\u6642",
+        "RequestID",
+        "\u62e0\u70b9",
+        "\u4f9d\u983c\u8005",
+        "\u4f9d\u983c\u756a\u53f7",
+        "\u7d44\u7e54",
+        "CA\u540d",
+        "\u51fa\u793e\u72b6\u6cc1",
+        "\u4ee3\u7406CA1",
+        "\u4ee3\u7406CA2",
+        "\u4ee3\u7406CA3",
+        "\u30aa\u30d7\u30b7\u30e7\u30f3",
+        "\u30e1\u30fc\u30eb\u30e1\u30e2",
+        "\u51e6\u7406\u65e5\u6642",
+        "\u671f\u65e5\u307e\u305f\u306f\u9762\u63a5\u65e5\u7a0b",
+        "\u30bf\u30a4\u30d7"
+    ];
+
+    var HEADER_LEGACY = [
         "\u9001\u4fe1\u65e5\u6642",
         "RequestID",
         "\u62e0\u70b9",
@@ -56,6 +76,7 @@
     }
 
     if (!csvFolder || !fso.FolderExists(csvFolder)) {
+        showFailurePopupWhenReady(pendingPath);
         WScript.Quit(3);
     }
 
@@ -66,10 +87,17 @@
     try {
         pending = readPendingCsv(pendingPath);
     } catch (e0) {
+        showFailurePopupWhenReady(pendingPath);
         WScript.Quit(4);
     }
 
-    var targetPath = buildTargetPath(csvFolder, pending.baseName, pending.sentAt);
+    var targetPath = "";
+    try {
+        targetPath = buildTargetPath(csvFolder, pending.baseName, pending.sentAt, pending.schema);
+    } catch (eTarget) {
+        showFailurePopupWhenReady(pendingPath);
+        WScript.Quit(7);
+    }
     var lockPath = targetPath + ".jlock";
     var startedAt = new Date().getTime();
 
@@ -101,6 +129,7 @@
             }
 
             releaseLock(lockPath);
+            showFailurePopupWhenReady(pendingPath);
             WScript.Quit(5);
         } catch (e1) {
             releaseLock(lockPath);
@@ -113,6 +142,7 @@
         }
     }
 
+    showFailurePopupWhenReady(pendingPath);
     WScript.Quit(6);
 
 
@@ -124,7 +154,8 @@
             throw new Error("PENDING_EMPTY");
         }
 
-        validateHeader(rows[0]);
+        var schema = detectHeader(rows[0]);
+        var expectedColumns = schema === "latest" ? HEADER_LATEST.length : HEADER_LEGACY.length;
 
         var records = [];
         var requestId = "";
@@ -140,7 +171,7 @@
                 continue;
             }
 
-            if (row.length !== 17) {
+            if (row.length !== expectedColumns) {
                 throw new Error("PENDING_BAD_COLUMNS");
             }
 
@@ -180,6 +211,7 @@
             sentAt: sentAt,
             requestId: requestId,
             baseName: baseName,
+            schema: schema,
             records: records
         };
     }
@@ -204,7 +236,7 @@
                     throw new Error("TARGET_PARSE_FAILED");
                 }
 
-                validateHeader(existingRows[0]);
+                validateHeader(existingRows[0], pending.schema);
 
                 for (i = 1; i < existingRows.length; i++) {
                     row = existingRows[i];
@@ -213,7 +245,7 @@
                         continue;
                     }
 
-                    if (row.length !== 17) {
+                    if (row.length !== expectedColumnCount(pending.schema)) {
                         throw new Error("TARGET_BAD_COLUMNS");
                     }
 
@@ -235,14 +267,14 @@
         }
 
         if (missing.length > 0) {
-            appendRows(targetPath, existingText, targetHasContent, missing);
+            appendRows(targetPath, existingText, targetHasContent, missing, pending.schema);
         }
 
         verifyAllRows(targetPath, pending);
     }
 
 
-    function appendRows(targetPath, existingText, targetHasContent, rows) {
+    function appendRows(targetPath, existingText, targetHasContent, rows, schema) {
         var stream, i;
 
         if (!targetHasContent) {
@@ -254,7 +286,7 @@
             );
 
             try {
-                stream.WriteLine(headerLine());
+                stream.WriteLine(headerLine(schema));
 
                 for (i = 0; i < rows.length; i++) {
                     stream.WriteLine(csvLine(rows[i]));
@@ -300,7 +332,7 @@
             throw new Error("VERIFY_EMPTY");
         }
 
-        validateHeader(rows[0]);
+        validateHeader(rows[0], pending.schema);
 
         for (i = 1; i < rows.length; i++) {
             row = rows[i];
@@ -309,7 +341,7 @@
                 continue;
             }
 
-            if (row.length !== 17) {
+            if (row.length !== expectedColumnCount(pending.schema)) {
                 throw new Error("VERIFY_BAD_COLUMNS");
             }
 
@@ -431,11 +463,93 @@
     }
 
 
-    function buildTargetPath(folder, baseName, sentAt) {
+    function shouldWaitForFailureReady(pendingPath) {
+        try {
+            if (!pendingPath || !fso.FileExists(pendingPath)) {
+                return false;
+            }
+
+            var file = fso.GetFile(pendingPath);
+            var createdAt = new Date(file.DateCreated).getTime();
+            var age = new Date().getTime() - createdAt;
+
+            return age >= 0 && age <= FAILURE_READY_RECENT_MS;
+        } catch (e) {
+            return false;
+        }
+    }
+
+
+    function showFailurePopupWhenReady(pendingPath) {
+        var readyPath = String(pendingPath || "") + COMPLETION_READY_SUFFIX;
+        var startedAt = new Date().getTime();
+
+        // For a just-submitted request, avoid overlapping the acceptance modal.
+        // Startup/manual retries are normally old Pending files, so notify immediately.
+        if (shouldWaitForFailureReady(pendingPath)) {
+            while (!fso.FileExists(readyPath) &&
+                   (new Date().getTime() - startedAt) < COMPLETION_READY_MAX_MS) {
+                WScript.Sleep(COMPLETION_READY_POLL_MS);
+            }
+        }
+
+        showFailurePopup();
+
+        try {
+            if (fso.FileExists(readyPath)) {
+                fso.DeleteFile(readyPath, true);
+            }
+        } catch (e) {
+        }
+    }
+
+
+    function showFailurePopup() {
+        try {
+            var message =
+                "\u30e1\u30f3\u30b7\u30e7\u30f3\u4f9d\u983c\u306e\u9001\u4fe1\u3092\u5b8c\u4e86\u3067\u304d\u307e\u305b\u3093\u3067\u3057\u305f\u3002" +
+                "\r\n\r\n" +
+                "\u672a\u9001\u4fe1\u30c7\u30fc\u30bf\u306f\u4fdd\u5b58\u3055\u308c\u3066\u3044\u307e\u3059\u3002" +
+                "\r\n" +
+                "\u30d5\u30a9\u30fc\u30e0\u3092\u958b\u304d\u3001\u300c\u672a\u9001\u4fe1\u3092\u518d\u9001\u300d\u304b\u3089\u518d\u9001\u3057\u3066\u304f\u3060\u3055\u3044\u3002";
+
+            // 16      = MB_ICONERROR
+            // 65536   = MB_SETFOREGROUND
+            // 262144  = MB_TOPMOST
+            // Timeout 0 keeps the failure notice visible until OK is pressed.
+            shell.Popup(
+                message,
+                0,
+                "\u30e1\u30f3\u30b7\u30e7\u30f3\u4f9d\u983c\u30d5\u30a9\u30fc\u30e0 | \u9001\u4fe1\u5931\u6557",
+                327696
+            );
+        } catch (e) {
+            // Notification failure must never alter Pending/CSV state.
+        }
+    }
+
+
+    function buildTargetPath(folder, baseName, sentAt, schema) {
         var dateKey = dateKeyFromSentAt(sentAt);
         var safeBase = safeFileName(baseName);
+        var preferred = fso.BuildPath(folder, safeBase + "_" + dateKey + ".csv");
 
-        return fso.BuildPath(folder, safeBase + "_" + dateKey + ".csv");
+        if (!fso.FileExists(preferred) || readText(preferred).length === 0) {
+            return preferred;
+        }
+
+        var currentSchema = detectHeader(parseCsv(readText(preferred))[0]);
+        if (currentSchema === schema) {
+            return preferred;
+        }
+
+        // Rollout-day safety: never mix the old and latest schemas in one CSV.
+        // Existing legacy daily files stay untouched; latest rows use a suffixed file.
+        if (schema === "latest") {
+            return fso.BuildPath(folder, safeBase + "_" + dateKey + "_v28.22.csv");
+        }
+
+        return fso.BuildPath(folder, safeBase + "_" + dateKey + "_legacy.csv");
     }
 
 
@@ -476,30 +590,51 @@
     }
 
 
-    function validateHeader(row) {
-        var i;
-
-        if (!row || row.length !== HEADER.length) {
-            throw new Error("HEADER_INVALID");
+    function normalizeHeaderField(value, index) {
+        var actual = String(value || "");
+        if (index === 0 && actual.length > 0 && actual.charCodeAt(0) === 0xFEFF) {
+            actual = actual.substring(1);
         }
+        return actual;
+    }
 
-        for (i = 0; i < HEADER.length; i++) {
-            var actual = String(row[i] || "");
 
-            if (i === 0 && actual.length > 0 &&
-                actual.charCodeAt(0) === 0xFEFF) {
-                actual = actual.substring(1);
+    function headerMatches(row, header) {
+        var i;
+        if (!row || row.length !== header.length) {
+            return false;
+        }
+        for (i = 0; i < header.length; i++) {
+            if (normalizeHeaderField(row[i], i) !== header[i]) {
+                return false;
             }
+        }
+        return true;
+    }
 
-            if (actual !== HEADER[i]) {
-                throw new Error("HEADER_MISMATCH");
-            }
+
+    function detectHeader(row) {
+        if (headerMatches(row, HEADER_LATEST)) { return "latest"; }
+        if (headerMatches(row, HEADER_LEGACY)) { return "legacy"; }
+        throw new Error("HEADER_MISMATCH");
+    }
+
+
+    function validateHeader(row, schema) {
+        var detected = detectHeader(row);
+        if (detected !== schema) {
+            throw new Error("HEADER_SCHEMA_MISMATCH");
         }
     }
 
 
-    function headerLine() {
-        return HEADER.join(",");
+    function expectedColumnCount(schema) {
+        return schema === "latest" ? HEADER_LATEST.length : HEADER_LEGACY.length;
+    }
+
+
+    function headerLine(schema) {
+        return (schema === "latest" ? HEADER_LATEST : HEADER_LEGACY).join(",");
     }
 
 
