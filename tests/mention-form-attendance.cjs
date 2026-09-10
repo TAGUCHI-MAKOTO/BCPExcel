@@ -70,7 +70,7 @@ const source = fs.readFileSync(path.join(folder, 'mention-form.js'), 'utf8');
             launchBackgroundWorker=function(){launched.push(true);};
             showAcceptedAndPrepareMinimize=function(){accepted++;};
             reset(1);
-            ok(!getAttendance(1) && !shown('options1') && !shown('urgentOption1') && !shown('noProxyOption1'),'initial status unset and all options hidden');
+            ok(!getAttendance(1) && shown('options1') && !shown('urgentOption1') && !shown('noProxyOption1'),'initial status unset, option heading visible and choices hidden');
             fill(1);
             ok(!validateForm() && modalFocusTarget==='attendanceWork1','attendance required before mail fields');
             closeValidationModal();
@@ -125,8 +125,8 @@ const source = fs.readFileSync(path.join(folder, 'mention-form.js'), 'utf8');
             select(1,'Work'); $('urgent1').click();
             ok(checked('urgent3') && shown('urgentOption3') && !shown('noProxyOption3') && snapshot(1)===snapshot(3),'attendance and urgent propagate with matching visibility');
             $('sameCA2').click();
-            ok(!$('org2').value && !getAttendance(2) && !shown('options2') && !checked('urgent2'),'unlink clears organization through options');
-            ok(!$('org3').value && !getAttendance(3) && !shown('options3'),'unlink clears downstream inherited values');
+            ok(!$('org2').value && !getAttendance(2) && shown('options2') && !checked('urgent2'),'unlink clears organization and choices while keeping option heading');
+            ok(!$('org3').value && !getAttendance(3) && shown('options3'),'unlink clears downstream values while keeping option heading');
             ok(!$('org2').disabled && !$('attendanceWork2').disabled && shown('inputNote2'),'unlink unlocks independent input and restores note');
             fill(2,'Short'); $('noProxy2').click();
             ok(snapshot(2)===snapshot(3),'new independent state propagates to request 3');
@@ -134,7 +134,7 @@ const source = fs.readFileSync(path.join(folder, 'mention-form.js'), 'utf8');
             $('ca2').value='送信直前CA';
             ok(validateForm() && $('ca3').value==='送信直前CA','validation synchronizes before submission');
             clearRequest(2);
-            ok(!getAttendance(2) && !getAttendance(3) && !shown('options3'),'clear resets linked attendance and options');
+            ok(!getAttendance(2) && !getAttendance(3) && shown('options3'),'clear resets linked attendance and choices while keeping option heading');
 
             // All four cancellation relationships: independent/linked request 2 and 3.
             for(var link2=0;link2<2;link2++){
@@ -153,7 +153,7 @@ const source = fs.readFileSync(path.join(folder, 'mention-form.js'), 'utf8');
             }
             reset(3); fill(1,'Off'); $('noProxy1').click(); $('sameCA2').click(); $('sameCA3').click();
             cancelRequest(3);
-            ok(!checked('sameCA3') && !getAttendance(3) && !shown('options3'),'cancel request 3 resets its new fields');
+            ok(!checked('sameCA3') && !getAttendance(3) && shown('options3'),'cancel request 3 resets its fields without hiding option heading');
             resetAfterSend();
             ok(visibleRequestCount===1 && !getAttendance(1) && !getAttendance(2) && !getAttendance(3) && !checked('sameCA2') && !checked('sameCA3'),'post-send reset clears all inherited state');
             ok($('requestBase').value==='呉服' && $('requesterName').innerText==='動作確認用','post-send reset preserves base and requester');

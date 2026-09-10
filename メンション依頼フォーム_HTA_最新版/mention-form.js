@@ -1,4 +1,4 @@
-﻿// v28.21: 出社状況・条件付きオプション・送信前確認
+﻿// v28.22: オプション見出しを常時表示し、必須ラベルを削除
 var CSV_SUBFOLDER_NAME = "書き込み用";
 var PENDING_FOLDER_NAME = "MentionRequest_Pending";
 var BACKGROUND_WORKER_NAME = "mention-request-worker.js";
@@ -579,7 +579,7 @@ function updateAttendanceUI(no){
         }
     }
 
-    el=$("options"+no); if(el){ el.style.visibility=attendance ? "visible" : "hidden"; }
+    // オプション見出しは常時表示。状態に応じて選択項目だけを切り替える。
     el=$("urgentOption"+no); if(el){ el.style.display=working ? "block" : "none"; }
     el=$("noProxyOption"+no); if(el){ el.style.display=needsProxy ? "block" : "none"; }
     var controls=["attendanceWork","attendanceOff","attendanceShort","urgent","noProxy"];
@@ -587,7 +587,6 @@ function updateAttendanceUI(no){
         el=$(controls[i]+no);
         if(el){ el.disabled=locked; }
     }
-    el=$("proxyRequired"+no); if(el){ el.style.display=needsProxy && !noProxy ? "inline" : "none"; }
 }
 
 function attendanceChanged(no){
