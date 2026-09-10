@@ -64,73 +64,6 @@ End Function
 </script>
 
 <script type="text/javascript" src="mention-form.js"></script>
-<script type="text/javascript">
-/* v28.20 compatibility patch: keep the repository JS split while applying
-   proxy-CA optional behavior and note visibility from the approved build. */
-function collectRequest(no){
-    return {
-        requestNo:no,
-        organization:val("org"+no),
-        caName:val("ca"+no),
-        proxyOrganization:"",
-        proxyCA1:val("proxyCA"+no+"_1"),
-        proxyCA2:val("proxyCA"+no+"_2"),
-        proxyCA3:val("proxyCA"+no+"_3"),
-        mailMemo:val("mailMemo"+no),
-        processedAt:val("processedAt"+no),
-        dueDate:val("dueDate"+no),
-        shortTime:checked("short"+no),
-        urgent:checked("urgent"+no),
-        type:val("type"+no)
-    };
-}
-
-function validateRequestSection(i){
-    if(!trimValue("org"+i)){
-        markError("org"+i);
-        showValidationModal(i,"依頼"+i+"：組織を入力してください","org"+i);
-        return false;
-    }
-    if(!trimValue("ca"+i)){
-        markError("ca"+i);
-        showValidationModal(i,"依頼"+i+"：CA名を入力してください","ca"+i);
-        return false;
-    }
-    if(!trimValue("mailMemo"+i)){
-        markError("mailMemo"+i);
-        showValidationModal(i,"依頼"+i+"：メールメモを入力してください","mailMemo"+i);
-        return false;
-    }
-    if(!trimValue("processedAt"+i)){
-        markError("processedAt"+i);
-        showValidationModal(i,"依頼"+i+"：処理日時を入力してください","processedAt"+i);
-        return false;
-    }
-    if(!trimValue("type"+i)){
-        markError("type"+i);
-        showValidationModal(i,"依頼"+i+"：タイプを選択してください","type"+i);
-        return false;
-    }
-    return true;
-}
-
-function updateInputNoteVisibility(no,on){
-    var note=$("inputNote"+no);
-    if(note){ note.style.display=on ? "none" : "block"; }
-}
-
-var toggleSameCABase=toggleSameCA;
-toggleSameCA=function(no){
-    toggleSameCABase(no);
-    updateInputNoteVisibility(no,checked("sameCA"+no));
-};
-
-var clearRequestBase=clearRequest;
-clearRequest=function(no){
-    clearRequestBase(no);
-    if(no===2 || no===3){ updateInputNoteVisibility(no,false); }
-};
-</script>
 </head>
 
 <body onload="initApp();">
@@ -160,17 +93,24 @@ clearRequest=function(no){
                     <input type="text" id="ca1">
                 </div>
 
-                <div class="option-zone option-inline">
-                    <label>オプション</label>
-                    <label class="checkline"><input type="checkbox" id="urgent1"> 至急</label>
-                    <label class="checkline"><input type="checkbox" id="short1"> 時短</label>
+                <div class="attendance-zone" id="attendanceGroup1" role="radiogroup" aria-labelledby="attendanceLabel1" aria-required="true">
+                    <label class="group-title" id="attendanceLabel1">出社状況 <span class="required-label">必須</span></label>
+                    <label class="checkline"><input type="radio" name="attendance1" id="attendanceWork1" value="出社" onclick="attendanceChanged(1);"> 出社</label>
+                    <label class="checkline"><input type="radio" name="attendance1" id="attendanceOff1" value="公休" onclick="attendanceChanged(1);"> 公休</label>
+                    <label class="checkline"><input type="radio" name="attendance1" id="attendanceShort1" value="時短（時間外）" onclick="attendanceChanged(1);"> 時短（時間外）</label>
                 </div>
 
                 <div class="field proxy-ca">
-                    <label>代理CA名</label>
-                    <input type="text" id="proxyCA1_1">
-                    <input type="text" id="proxyCA1_2" class="stacked">
-                    <input type="text" id="proxyCA1_3" class="stacked">
+                    <label for="proxyCA1_1">代理CA名 <span class="required-label" id="proxyRequired1" style="display:none">必須</span></label>
+                    <input type="text" id="proxyCA1_1" disabled>
+                    <input type="text" id="proxyCA1_2" disabled class="stacked">
+                    <input type="text" id="proxyCA1_3" disabled class="stacked">
+                </div>
+
+                <div class="option-zone" id="options1" style="visibility:hidden">
+                    <label>オプション</label>
+                    <label class="checkline" id="urgentOption1" style="display:none"><input type="checkbox" id="urgent1" onclick="attendanceChanged(1);"> 至急</label>
+                    <label class="checkline" id="noProxyOption1" style="display:none"><input type="checkbox" id="noProxy1" onclick="attendanceChanged(1);"> 代理CA記載なし</label>
                 </div>
 
                 <div class="detail-zone">
@@ -232,17 +172,24 @@ clearRequest=function(no){
                     <input type="text" id="ca2">
                 </div>
 
-                <div class="option-zone option-inline">
-                    <label>オプション</label>
-                    <label class="checkline"><input type="checkbox" id="urgent2"> 至急</label>
-                    <label class="checkline"><input type="checkbox" id="short2"> 時短</label>
+                <div class="attendance-zone" id="attendanceGroup2" role="radiogroup" aria-labelledby="attendanceLabel2" aria-required="true">
+                    <label class="group-title" id="attendanceLabel2">出社状況 <span class="required-label">必須</span></label>
+                    <label class="checkline"><input type="radio" name="attendance2" id="attendanceWork2" value="出社" onclick="attendanceChanged(2);"> 出社</label>
+                    <label class="checkline"><input type="radio" name="attendance2" id="attendanceOff2" value="公休" onclick="attendanceChanged(2);"> 公休</label>
+                    <label class="checkline"><input type="radio" name="attendance2" id="attendanceShort2" value="時短（時間外）" onclick="attendanceChanged(2);"> 時短（時間外）</label>
                 </div>
 
                 <div class="field proxy-ca">
-                    <label>代理CA名</label>
-                    <input type="text" id="proxyCA2_1">
-                    <input type="text" id="proxyCA2_2" class="stacked">
-                    <input type="text" id="proxyCA2_3" class="stacked">
+                    <label for="proxyCA2_1">代理CA名 <span class="required-label" id="proxyRequired2" style="display:none">必須</span></label>
+                    <input type="text" id="proxyCA2_1" disabled>
+                    <input type="text" id="proxyCA2_2" disabled class="stacked">
+                    <input type="text" id="proxyCA2_3" disabled class="stacked">
+                </div>
+
+                <div class="option-zone" id="options2" style="visibility:hidden">
+                    <label>オプション</label>
+                    <label class="checkline" id="urgentOption2" style="display:none"><input type="checkbox" id="urgent2" onclick="attendanceChanged(2);"> 至急</label>
+                    <label class="checkline" id="noProxyOption2" style="display:none"><input type="checkbox" id="noProxy2" onclick="attendanceChanged(2);"> 代理CA記載なし</label>
                 </div>
 
                 <div class="detail-zone">
@@ -305,17 +252,24 @@ clearRequest=function(no){
                     <input type="text" id="ca3">
                 </div>
 
-                <div class="option-zone option-inline">
-                    <label>オプション</label>
-                    <label class="checkline"><input type="checkbox" id="urgent3"> 至急</label>
-                    <label class="checkline"><input type="checkbox" id="short3"> 時短</label>
+                <div class="attendance-zone" id="attendanceGroup3" role="radiogroup" aria-labelledby="attendanceLabel3" aria-required="true">
+                    <label class="group-title" id="attendanceLabel3">出社状況 <span class="required-label">必須</span></label>
+                    <label class="checkline"><input type="radio" name="attendance3" id="attendanceWork3" value="出社" onclick="attendanceChanged(3);"> 出社</label>
+                    <label class="checkline"><input type="radio" name="attendance3" id="attendanceOff3" value="公休" onclick="attendanceChanged(3);"> 公休</label>
+                    <label class="checkline"><input type="radio" name="attendance3" id="attendanceShort3" value="時短（時間外）" onclick="attendanceChanged(3);"> 時短（時間外）</label>
                 </div>
 
                 <div class="field proxy-ca">
-                    <label>代理CA名</label>
-                    <input type="text" id="proxyCA3_1">
-                    <input type="text" id="proxyCA3_2" class="stacked">
-                    <input type="text" id="proxyCA3_3" class="stacked">
+                    <label for="proxyCA3_1">代理CA名 <span class="required-label" id="proxyRequired3" style="display:none">必須</span></label>
+                    <input type="text" id="proxyCA3_1" disabled>
+                    <input type="text" id="proxyCA3_2" disabled class="stacked">
+                    <input type="text" id="proxyCA3_3" disabled class="stacked">
+                </div>
+
+                <div class="option-zone" id="options3" style="visibility:hidden">
+                    <label>オプション</label>
+                    <label class="checkline" id="urgentOption3" style="display:none"><input type="checkbox" id="urgent3" onclick="attendanceChanged(3);"> 至急</label>
+                    <label class="checkline" id="noProxyOption3" style="display:none"><input type="checkbox" id="noProxy3" onclick="attendanceChanged(3);"> 代理CA記載なし</label>
                 </div>
 
                 <div class="detail-zone">
@@ -381,6 +335,17 @@ clearRequest=function(no){
 
 </div>
 
+
+<div id="sendConfirmOverlay" class="modal-overlay hidden" onkeydown="handleSendConfirmKey(event);">
+    <div class="validation-modal modal-neutral send-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="sendConfirmTitle" aria-describedby="sendConfirmMessage">
+        <div id="sendConfirmTitle" class="modal-title">送信前確認</div>
+        <div id="sendConfirmMessage" class="modal-message">出社状況は相違ないですか？</div>
+        <div class="cancel-modal-actions">
+            <button type="button" id="sendConfirmYes" class="modal-ok" onclick="confirmSendRequest();">はい</button>
+            <button type="button" id="sendConfirmNo" class="cancel-modal-back" onclick="closeSendConfirm();">いいえ</button>
+        </div>
+    </div>
+</div>
 
 <div id="cancelModalOverlay" class="modal-overlay hidden">
     <div id="cancelConfirmModal" class="validation-modal modal-request2 cancel-confirm-modal">

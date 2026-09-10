@@ -943,26 +943,26 @@ select:focus{
 }
 
 .org,
-.ca,
-.proxy-ca{
-    width:190px;
+.ca{
+    width:160px;
 }
 
-/* v28.20: オプションとの間に少し余裕を持たせるため、代理CA名だけ8px右へ。 */
+/* v28.21: 出社状況と条件付きオプションの間に代理CA名を配置。 */
 .proxy-ca{
-    margin-left:8px;
+    width:170px;
+    margin-left:0;
 }
 
 .option-zone{
-    width:80px;
+    width:148px;
     margin-left:0;
-    margin-right:5px;
+    margin-right:12px;
 }
 
-/* v28.19: detail-zoneの開始位置705pxは維持。オプション幅だけ縮め、代理CA名を左へ寄せて右側に余白を確保。 */
+/* 左側840pxを確保し、右側の入力欄と操作ボタンの右端を揃える。 */
 .detail-zone{
     float:right;
-    width:calc(100% - 705px);
+    width:calc(100% - 840px);
 }
 
 .detail-top,
@@ -980,7 +980,7 @@ select:focus{
 }
 
 .card-action-row{
-    left:733px; /* カード左余白28px + 左側705px */
+    left:868px; /* カード左余白28px + 左側840px */
     right:20px;
     width:auto;
     font-size:0; /* inline-block間の改行・空白による余白をなくす */
@@ -999,4 +999,52 @@ select:focus{
 /* カード内の右余白20pxに合わせ、送信ボタンの右端も統一。 */
 #footerBar{
     padding-right:20px;
+}
+
+
+/* v28.21: ラジオ・チェック項目の行高と見出しを統一。 */
+.attendance-zone{
+    float:left;
+    width:148px;
+    margin-right:12px;
+}
+.attendance-zone .group-title{
+    display:block;
+    margin-bottom:4px;
+    color:#5e5e5e;
+    font-size:15px;
+    font-weight:bold;
+}
+.attendance-zone .checkline,
+.option-zone .checkline{
+    margin:7px 0 0 0;
+    font-size:14px;
+    line-height:24px;
+    white-space:nowrap;
+}
+.attendance-zone .checkline input,
+.option-zone .checkline input{
+    width:18px;
+    height:18px;
+    margin-right:3px;
+}
+.required-label{
+    font-size:11px;
+    color:#b84158;
+}
+.attendance-zone.error-field{
+    outline:2px solid #d64b4b;
+    border-radius:4px;
+}
+.same-ca-inline{
+    font-size:14px !important;
+    margin-left:0;
+}
+.same-ca-inline input{
+    width:17px;
+    height:17px;
+    margin-right:3px;
+}
+.send-confirm-modal .modal-message{
+    text-align:center;
 }

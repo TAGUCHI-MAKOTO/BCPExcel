@@ -1,4 +1,5 @@
-﻿var CSV_SUBFOLDER_NAME = "書き込み用";
+﻿// v28.21: 出社状況・条件付きオプション・送信前確認
+var CSV_SUBFOLDER_NAME = "書き込み用";
 var PENDING_FOLDER_NAME = "MentionRequest_Pending";
 var BACKGROUND_WORKER_NAME = "mention-request-worker.js";
 var WORKER_MAX_RETRY_SECONDS = 300;
@@ -136,6 +137,7 @@ function initApp(){
     startScreenWatcher();
 
     bindSameCASync();
+    for(var no=1;no<=3;no++){ updateAttendanceUI(no); }
 
     /*
       v26:
@@ -437,19 +439,24 @@ function checked(id){
 }
 
 function collectRequest(no){
+    var attendance=getAttendance(no);
+    var noProxy=(attendance==="公休" || attendance==="時短（時間外）") && checked("noProxy"+no);
+    var useProxy=(attendance==="公休" || attendance==="時短（時間外）") && !noProxy;
     return {
         requestNo:no,
         organization:val("org"+no),
         caName:val("ca"+no),
-        proxyOrganization:val("proxyOrg"+no),
-        proxyCA1:val("proxyCA"+no+"_1"),
-        proxyCA2:val("proxyCA"+no+"_2"),
-        proxyCA3:val("proxyCA"+no+"_3"),
+        proxyOrganization:"",
+        proxyCA1:useProxy ? val("proxyCA"+no+"_1") : "",
+        proxyCA2:useProxy ? val("proxyCA"+no+"_2") : "",
+        proxyCA3:useProxy ? val("proxyCA"+no+"_3") : "",
+        attendance:attendance,
+        noProxy:noProxy,
         mailMemo:val("mailMemo"+no),
         processedAt:val("processedAt"+no),
         dueDate:val("dueDate"+no),
-        shortTime:checked("short"+no),
-        urgent:checked("urgent"+no),
+        shortTime:attendance==="時短（時間外）",
+        urgent:attendance==="出社" && checked("urgent"+no),
         type:val("type"+no)
     };
 }
@@ -457,16 +464,17 @@ function collectRequest(no){
 function hasAnyInput(req){
     return !!(req.organization||req.caName||req.proxyOrganization||req.proxyCA1||
               req.proxyCA2||req.proxyCA3||req.mailMemo||req.processedAt||
-              req.dueDate||req.shortTime||req.urgent||req.type);
+              req.dueDate||req.attendance||req.noProxy||req.shortTime||req.urgent||req.type);
 }
 
 function validateForm(){
     var i;
 
+    syncAllSameCA();
     clearErrors();
 
     // 表示中の依頼を、画面左→右の順番でチェック
-    // 組織/CA名/代理CA組織/代理CA名 → メールメモ → 処理日時 → タイプ
+    // 組織 → CA名 → 出社状況 → 代理CA名 → メールメモ → 処理日時 → タイプ
     for(i=1;i<=visibleRequestCount;i++){
         if(!validateRequestSection(i)){
             return false;
@@ -496,18 +504,17 @@ function validateRequestSection(i){
         return false;
     }
 
-    var proxyOrg=trimValue("proxyOrg"+i);
-    var proxyCA1=trimValue("proxyCA"+i+"_1");
-
-    if(proxyOrg && !proxyCA1){
-        markError("proxyCA"+i+"_1");
-        showValidationModal(i,"依頼"+i+"：代理CA組織が入力されているため、代理CA名も入力してください","proxyCA"+i+"_1");
+    var attendance=getAttendance(i);
+    if(!attendance){
+        markError("attendanceGroup"+i);
+        showValidationModal(i,"依頼"+i+"：出社状況を選択してください","attendanceWork"+i);
         return false;
     }
 
-    if(proxyCA1 && !proxyOrg){
-        markError("proxyOrg"+i);
-        showValidationModal(i,"依頼"+i+"：代理CA名が入力されているため、代理CA組織も入力してください","proxyOrg"+i);
+    if(attendance!=="出社" && !checked("noProxy"+i) &&
+       !trimValue("proxyCA"+i+"_1") && !trimValue("proxyCA"+i+"_2") && !trimValue("proxyCA"+i+"_3")){
+        markError("proxyCA"+i+"_1");
+        showValidationModal(i,"依頼"+i+"：代理CA名を入力してください（記載しない場合は「代理CA記載なし」を選択）","proxyCA"+i+"_1");
         return false;
     }
 
@@ -534,27 +541,59 @@ function validateRequestSection(i){
 
 
 function clearRequest(no){
-    var ids=["org"+no,"ca"+no,"proxyOrg"+no,"proxyCA"+no+"_1","proxyCA"+no+"_2","proxyCA"+no+"_3","mailMemo"+no,"processedAt"+no,"dueDate"+no];
+    clearRequestFields(no);
+    syncAllSameCA();
+    clearErrors();
+    focusField("org"+no);
+}
+
+function getAttendance(no){
+    if(checked("attendanceWork"+no)){ return "出社"; }
+    if(checked("attendanceOff"+no)){ return "公休"; }
+    if(checked("attendanceShort"+no)){ return "時短（時間外）"; }
+    return "";
+}
+
+function setAttendance(no,value){
+    setChecked("attendanceWork"+no,value==="出社");
+    setChecked("attendanceOff"+no,value==="公休");
+    setChecked("attendanceShort"+no,value==="時短（時間外）");
+}
+
+function updateAttendanceUI(no){
+    var attendance=getAttendance(no);
+    var working=attendance==="出社";
+    var needsProxy=attendance==="公休" || attendance==="時短（時間外）";
+    var locked=no>1 && checked("sameCA"+no);
     var i,el;
 
-    if(no===2 || no===3){
-        el=$("sameCA"+no);
-        if(el){ el.checked=false; }
-        setSameCAFieldsLocked(no,false);
-        updateSameCALabel(no,false);
+    // 非表示になる項目の選択・代理CA名は送信値に残さない。
+    if(!working){ setChecked("urgent"+no,false); }
+    if(!needsProxy){ setChecked("noProxy"+no,false); }
+    var noProxy=needsProxy && checked("noProxy"+no);
+    for(i=1;i<=3;i++){
+        el=$("proxyCA"+no+"_"+i);
+        if(el){
+            if(!needsProxy || noProxy){ el.value=""; }
+            el.disabled=locked || !needsProxy || noProxy;
+        }
     }
 
-    for(i=0;i<ids.length;i++){
-        el=$(ids[i]);
-        if(el){ el.value=""; }
+    el=$("options"+no); if(el){ el.style.visibility=attendance ? "visible" : "hidden"; }
+    el=$("urgentOption"+no); if(el){ el.style.display=working ? "block" : "none"; }
+    el=$("noProxyOption"+no); if(el){ el.style.display=needsProxy ? "block" : "none"; }
+    var controls=["attendanceWork","attendanceOff","attendanceShort","urgent","noProxy"];
+    for(i=0;i<controls.length;i++){
+        el=$(controls[i]+no);
+        if(el){ el.disabled=locked; }
     }
+    el=$("proxyRequired"+no); if(el){ el.style.display=needsProxy && !noProxy ? "inline" : "none"; }
+}
 
-    el=$("type"+no); if(el){ el.selectedIndex=0; }
-    el=$("short"+no); if(el){ el.checked=false; }
-    el=$("urgent"+no); if(el){ el.checked=false; }
-
+function attendanceChanged(no){
+    updateAttendanceUI(no);
+    syncAllSameCA();
     clearErrors();
-    try{$("org"+no).focus();}catch(err){}
 }
 
 function getSameCASourceNo(no){
@@ -566,7 +605,6 @@ function getSameCAFieldPairs(no){
     return [
         ["org"+src,"org"+no],
         ["ca"+src,"ca"+no],
-        ["proxyOrg"+src,"proxyOrg"+no],
         ["proxyCA"+src+"_1","proxyCA"+no+"_1"],
         ["proxyCA"+src+"_2","proxyCA"+no+"_2"],
         ["proxyCA"+src+"_3","proxyCA"+no+"_3"]
@@ -575,10 +613,15 @@ function getSameCAFieldPairs(no){
 
 function copySameCAValues(no){
     var pairs=getSameCAFieldPairs(no),i,a,b;
+    var src=getSameCASourceNo(no);
     for(i=0;i<pairs.length;i++){
         a=$(pairs[i][0]); b=$(pairs[i][1]);
         if(a&&b){ b.value=a.value; }
     }
+    setAttendance(no,getAttendance(src));
+    setChecked("urgent"+no,checked("urgent"+src));
+    setChecked("noProxy"+no,checked("noProxy"+src));
+    updateAttendanceUI(no);
 }
 
 function setSameCAFieldsLocked(no,locked){
@@ -587,6 +630,13 @@ function setSameCAFieldsLocked(no,locked){
         b=$(pairs[i][1]);
         if(b){ b.disabled=!!locked; }
     }
+    // 連動解除後も、出社状況に応じた代理CA欄の非活性は維持。
+    updateAttendanceUI(no);
+}
+
+function updateInputNoteVisibility(no,on){
+    var note=$("inputNote"+no);
+    if(note){ note.style.display=on ? "none" : "block"; }
 }
 
 function updateSameCALabel(no,on){
@@ -594,70 +644,58 @@ function updateSameCALabel(no,on){
     if(label){
         label.innerText=on ? "依頼"+src+"のCAを反映中" : "依頼"+src+"と同一CA";
     }
+    updateInputNoteVisibility(no,on);
 }
 
 function toggleSameCA(no){
     var box=$("sameCA"+no);
     if(!box){return;}
-
     if(box.checked){
         copySameCAValues(no);
-        setSameCAFieldsLocked(no,true);
-        updateSameCALabel(no,true);
     }else{
-        // フリー入力へ切り替える際は、反映していたCA関連情報を全クリア
-        setSameCAFieldsLocked(no,false);
         clearSameCAFields(no);
-        updateSameCALabel(no,false);
     }
+    setSameCAFieldsLocked(no,box.checked);
+    updateSameCALabel(no,box.checked);
+    syncAllSameCA();
 }
 
 function clearSameCAFields(no){
-    var ids=[
-        "org"+no,
-        "ca"+no,
-        "proxyOrg"+no,
-        "proxyCA"+no+"_1",
-        "proxyCA"+no+"_2",
-        "proxyCA"+no+"_3"
-    ];
-    var i,el;
-
-    for(i=0;i<ids.length;i++){
-        el=$(ids[i]);
-        if(el){
-            el.value="";
-        }
-    }
-
+    var pairs=getSameCAFieldPairs(no),i;
+    for(i=0;i<pairs.length;i++){ setValue(pairs[i][1],""); }
+    setAttendance(no,"");
+    setChecked("urgent"+no,false);
+    setChecked("noProxy"+no,false);
+    updateAttendanceUI(no);
     clearErrors();
-    try{
-        $("org"+no).focus();
-    }catch(err){
-    }
+    focusField("org"+no);
 }
 
 function syncSameCATarget(no){
-    var box=$("sameCA"+no);
-    if(box&&box.checked){ copySameCAValues(no); }
+    if(no<=visibleRequestCount && checked("sameCA"+no)){
+        copySameCAValues(no);
+    }
+}
+
+function syncAllSameCA(){
+    // 必ず依頼1→2→3の順で連鎖を更新する。
+    syncSameCATarget(2);
+    syncSameCATarget(3);
 }
 
 function bindSameCASync(){
-    var src1=["org1","ca1","proxyOrg1","proxyCA1_1","proxyCA1_2","proxyCA1_3"];
-    var src2=["org2","ca2","proxyOrg2","proxyCA2_1","proxyCA2_2","proxyCA2_3"];
-    var i;
-
-    for(i=0;i<src1.length;i++){ bindSameCAEvent(src1[i],2); }
-    for(i=0;i<src2.length;i++){ bindSameCAEvent(src2[i],3); }
+    var no,i;
+    for(no=1;no<=2;no++){
+        bindSameCAEvent("org"+no);
+        bindSameCAEvent("ca"+no);
+        for(i=1;i<=3;i++){ bindSameCAEvent("proxyCA"+no+"_"+i); }
+    }
 }
 
-function bindSameCAEvent(id,targetNo){
+function bindSameCAEvent(id){
     var el=$(id);
     if(!el){return;}
-    var fn=function(){
-        syncSameCATarget(targetNo);
-        if(targetNo===2){ syncSameCATarget(3); }
-    };
+    var fn=function(){ syncAllSameCA(); };
     if(el.addEventListener){
         el.addEventListener("input",fn,false);
         el.addEventListener("change",fn,false);
@@ -726,9 +764,9 @@ function closeValidationModal(){
 function clearErrors(){
     var ids=[
         "requestBase",
-        "org1","ca1","proxyOrg1","proxyCA1_1","mailMemo1","processedAt1","type1",
-        "org2","ca2","proxyOrg2","proxyCA2_1","mailMemo2","processedAt2","type2",
-        "org3","ca3","proxyOrg3","proxyCA3_1","mailMemo3","processedAt3","type3"
+        "org1","ca1","attendanceGroup1","proxyCA1_1","mailMemo1","processedAt1","type1",
+        "org2","ca2","attendanceGroup2","proxyCA2_1","mailMemo2","processedAt2","type2",
+        "org3","ca3","attendanceGroup3","proxyCA3_1","mailMemo3","processedAt3","type3"
     ];
 
     var i,el;
@@ -765,7 +803,43 @@ function trimValue(id){
 }
 
 
+var sendConfirmationOpen=false;
+
 function sendRequest(){
+    if(sendConfirmationOpen || !validateForm()){ return; }
+    sendConfirmationOpen=true;
+    $("sendConfirmOverlay").className="modal-overlay";
+    focusField("sendConfirmNo");
+}
+
+function closeSendConfirm(){
+    sendConfirmationOpen=false;
+    $("sendConfirmOverlay").className="modal-overlay hidden";
+    focusField("sendButton");
+}
+
+function confirmSendRequest(){
+    if(!sendConfirmationOpen){ return; }
+    closeSendConfirm();
+    submitConfirmedRequest();
+}
+
+function handleSendConfirmKey(event){
+    event=event || window.event;
+    var code=event.keyCode || event.which;
+    if(code===27){
+        closeSendConfirm();
+    }else if(code===9){
+        // 確認中にTabで背面の入力欄や送信ボタンへ移動しない。
+        focusField(document.activeElement===$("sendConfirmNo") ? "sendConfirmYes" : "sendConfirmNo");
+    }else{
+        return;
+    }
+    if(event.preventDefault){ event.preventDefault(); }
+    event.returnValue=false;
+}
+
+function submitConfirmedRequest(){
     if(!validateForm()){ return; }
 
     var requests=[],i,req;
@@ -913,7 +987,14 @@ function cancelRequest(no){
         if(visibleRequestCount>=3){
             // 依頼3が存在する場合：
             // 依頼3の内容を依頼2へ繰り上げて、依頼3だけを閉じる
+            syncAllSameCA();
+            // 元の依頼3が依頼1まで連動していた場合だけ、新しい依頼2も連動を維持。
+            var keepSameCA=checked("sameCA3") && checked("sameCA2");
+            setChecked("sameCA2",false);
             copyRequestFields(3,2);
+            setChecked("sameCA2",keepSameCA);
+            setSameCAFieldsLocked(2,keepSameCA);
+            updateSameCALabel(2,keepSameCA);
             clearRequestFields(3);
 
             addHiddenClass("request3");
@@ -973,8 +1054,10 @@ function copyRequestFields(fromNo,toNo){
     setValue("processedAt"+toNo,val("processedAt"+fromNo));
     setValue("dueDate"+toNo,val("dueDate"+fromNo));
 
-    setChecked("short"+toNo,checked("short"+fromNo));
+    setAttendance(toNo,getAttendance(fromNo));
     setChecked("urgent"+toNo,checked("urgent"+fromNo));
+    setChecked("noProxy"+toNo,checked("noProxy"+fromNo));
+    updateAttendanceUI(toNo);
 
     if($("type"+toNo) && $("type"+fromNo)){
         $("type"+toNo).value=$("type"+fromNo).value;
@@ -1002,8 +1085,16 @@ function clearRequestFields(i){
     setValue("processedAt"+i,"");
     setValue("dueDate"+i,"");
 
-    setChecked("short"+i,false);
+    setAttendance(i,"");
     setChecked("urgent"+i,false);
+    setChecked("noProxy"+i,false);
+    setChecked("sameCA"+i,false);
+    if(i>1){
+        setSameCAFieldsLocked(i,false);
+        updateSameCALabel(i,false);
+    }else{
+        updateAttendanceUI(i);
+    }
 
     if($("type"+i)){
         $("type"+i).selectedIndex=0;
