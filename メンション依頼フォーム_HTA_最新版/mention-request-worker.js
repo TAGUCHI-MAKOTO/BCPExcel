@@ -13,7 +13,28 @@
     var COMPLETION_READY_POLL_MS = 200;
     var FAILURE_READY_RECENT_MS = 60000;
 
+    // v28.23 current schema: RequestID is last and each request row has its own ID.
     var HEADER_LATEST = [
+        "\u9001\u4fe1\u65e5\u6642",
+        "\u62e0\u70b9",
+        "\u4f9d\u983c\u8005",
+        "\u4f9d\u983cNo.",
+        "\u7d44\u7e54",
+        "CA\u540d",
+        "\u51fa\u793e\u72b6\u6cc1",
+        "\u4ee3\u7406CA1",
+        "\u4ee3\u7406CA2",
+        "\u4ee3\u7406CA3",
+        "\u30aa\u30d7\u30b7\u30e7\u30f3",
+        "\u30e1\u30fc\u30eb\u30e1\u30e2",
+        "\u51e6\u7406\u65e5\u6642",
+        "\u671f\u65e5\u307e\u305f\u306f\u9762\u63a5\u65e5\u7a0b",
+        "\u30bf\u30a4\u30d7",
+        "RequestID"
+    ];
+
+    // v28.22 schema kept for replaying already-created Pending files.
+    var HEADER_V2822 = [
         "\u9001\u4fe1\u65e5\u6642",
         "RequestID",
         "\u62e0\u70b9",
@@ -155,14 +176,14 @@
         }
 
         var schema = detectHeader(rows[0]);
-        var expectedColumns = schema === "latest" ? HEADER_LATEST.length : HEADER_LEGACY.length;
+        var expectedColumns = expectedColumnCount(schema);
 
         var records = [];
-        var requestId = "";
         var baseName = "";
         var sentAt = "";
         var requestNos = {};
-        var i, row, no;
+        var requestIds = {};
+        var i, row, no, rowRequestId, rowBaseName, rowSentAt;
 
         for (i = 1; i < rows.length; i++) {
             row = rows[i];
@@ -175,31 +196,31 @@
                 throw new Error("PENDING_BAD_COLUMNS");
             }
 
-            if (!requestId) {
-                sentAt = String(row[0] || "");
-                requestId = String(row[1] || "");
-                baseName = String(row[2] || "");
+            rowSentAt = sentAtFromRow(row, schema);
+            rowBaseName = baseNameFromRow(row, schema);
+            rowRequestId = requestIdFromRow(row, schema);
+            no = requestNoFromRow(row, schema);
 
-                if (!sentAt || !requestId || !baseName) {
-                    throw new Error("PENDING_KEY_MISSING");
-                }
-            } else {
-                if (String(row[1] || "") !== requestId ||
-                    String(row[2] || "") !== baseName) {
-                    throw new Error("PENDING_MIXED_PACKAGE");
-                }
+            if (!rowSentAt || !rowBaseName || !rowRequestId || !no) {
+                throw new Error("PENDING_KEY_MISSING");
             }
 
-            no = String(row[4] || "");
-            if (!no) {
-                throw new Error("REQUEST_NO_MISSING");
+            if (!sentAt) {
+                sentAt = rowSentAt;
+                baseName = rowBaseName;
+            } else if (rowSentAt !== sentAt || rowBaseName !== baseName) {
+                throw new Error("PENDING_MIXED_PACKAGE");
             }
 
             if (requestNos[no]) {
                 throw new Error("PENDING_DUPLICATE_REQUEST_NO");
             }
+            if (requestIds[rowRequestId]) {
+                throw new Error("PENDING_DUPLICATE_REQUEST_ID");
+            }
 
             requestNos[no] = true;
+            requestIds[rowRequestId] = true;
             records.push(row);
         }
 
@@ -209,13 +230,11 @@
 
         return {
             sentAt: sentAt,
-            requestId: requestId,
             baseName: baseName,
             schema: schema,
             records: records
         };
     }
-
 
     function writeMissingRowsAndVerify(targetPath, pending) {
         var existingText = "";
@@ -249,7 +268,7 @@
                         throw new Error("TARGET_BAD_COLUMNS");
                     }
 
-                    key = makeKey(row[1], row[4]);
+                    key = makeKey(requestIdFromRow(row, pending.schema), requestNoFromRow(row, pending.schema));
                     existingKeys[key] = true;
                 }
             }
@@ -259,7 +278,7 @@
 
         for (i = 0; i < pending.records.length; i++) {
             row = pending.records[i];
-            key = makeKey(row[1], row[4]);
+            key = makeKey(requestIdFromRow(row, pending.schema), requestNoFromRow(row, pending.schema));
 
             if (!existingKeys[key]) {
                 missing.push(row);
@@ -345,12 +364,12 @@
                 throw new Error("VERIFY_BAD_COLUMNS");
             }
 
-            keys[makeKey(row[1], row[4])] = true;
+            keys[makeKey(requestIdFromRow(row, pending.schema), requestNoFromRow(row, pending.schema))] = true;
         }
 
         for (i = 0; i < pending.records.length; i++) {
             row = pending.records[i];
-            key = makeKey(row[1], row[4]);
+            key = makeKey(requestIdFromRow(row, pending.schema), requestNoFromRow(row, pending.schema));
 
             if (!keys[key]) {
                 throw new Error("VERIFY_FAILED");
@@ -543,9 +562,11 @@
             return preferred;
         }
 
-        // Rollout-day safety: never mix the old and latest schemas in one CSV.
-        // Existing legacy daily files stay untouched; latest rows use a suffixed file.
+        // Rollout-day safety: never mix schemas in one CSV.
         if (schema === "latest") {
+            return fso.BuildPath(folder, safeBase + "_" + dateKey + "_v28.23.csv");
+        }
+        if (schema === "v2822") {
             return fso.BuildPath(folder, safeBase + "_" + dateKey + "_v28.22.csv");
         }
 
@@ -615,6 +636,7 @@
 
     function detectHeader(row) {
         if (headerMatches(row, HEADER_LATEST)) { return "latest"; }
+        if (headerMatches(row, HEADER_V2822)) { return "v2822"; }
         if (headerMatches(row, HEADER_LEGACY)) { return "legacy"; }
         throw new Error("HEADER_MISMATCH");
     }
@@ -629,12 +651,36 @@
 
 
     function expectedColumnCount(schema) {
-        return schema === "latest" ? HEADER_LATEST.length : HEADER_LEGACY.length;
+        if (schema === "latest") { return HEADER_LATEST.length; }
+        if (schema === "v2822") { return HEADER_V2822.length; }
+        return HEADER_LEGACY.length;
     }
 
 
     function headerLine(schema) {
-        return (schema === "latest" ? HEADER_LATEST : HEADER_LEGACY).join(",");
+        if (schema === "latest") { return HEADER_LATEST.join(","); }
+        if (schema === "v2822") { return HEADER_V2822.join(","); }
+        return HEADER_LEGACY.join(",");
+    }
+
+
+    function sentAtFromRow(row, schema) {
+        return String(row[0] || "");
+    }
+
+
+    function baseNameFromRow(row, schema) {
+        return String(row[schema === "latest" ? 1 : 2] || "");
+    }
+
+
+    function requestNoFromRow(row, schema) {
+        return String(row[schema === "latest" ? 3 : 4] || "");
+    }
+
+
+    function requestIdFromRow(row, schema) {
+        return String(row[schema === "latest" ? 15 : 1] || "");
     }
 
 
