@@ -1,4 +1,4 @@
-﻿// v28.22: オプション見出し常時表示・必須ラベル削除・送信前確認に依頼内容を表示
+﻿// v28.23: CSV列順・依頼別RequestID・マルチモニター位置保持・同一CAオプション非連動
 var CSV_SUBFOLDER_NAME = "書き込み用";
 var PENDING_FOLDER_NAME = "MentionRequest_Pending";
 var BACKGROUND_WORKER_NAME = "mention-request-worker.js";
@@ -417,7 +417,13 @@ function resizeApp(centerOnFirst){
             }
 
             window.resizeTo(wantedW,wantedH);
-            centerCurrentWindow(wantedW,wantedH);
+
+            // v28.23: 初回配置時だけ中央寄せする。
+            // 2件目/3件目の追加・取消・送信後リセット・画面監視による再計算では
+            // moveToを呼ばず、現在いるモニター上の位置を維持する。
+            if(centerOnFirst && !hasPositionedWindow){
+                centerCurrentWindow(wantedW,wantedH);
+            }
             window.scrollTo(0,0);
 
         }catch(err){
@@ -582,11 +588,15 @@ function updateAttendanceUI(no){
     // オプション見出しは常時表示。状態に応じて選択項目だけを切り替える。
     el=$("urgentOption"+no); if(el){ el.style.display=working ? "block" : "none"; }
     el=$("noProxyOption"+no); if(el){ el.style.display=needsProxy ? "block" : "none"; }
-    var controls=["attendanceWork","attendanceOff","attendanceShort","urgent","noProxy"];
+    // v28.23: 同一CA時に固定するのはCA情報と出社状況のみ。
+    // オプション（至急／代理CA記載なし）は依頼ごとに操作できるようにする。
+    var controls=["attendanceWork","attendanceOff","attendanceShort"];
     for(i=0;i<controls.length;i++){
         el=$(controls[i]+no);
         if(el){ el.disabled=locked; }
     }
+    el=$("urgent"+no); if(el){ el.disabled=!working; }
+    el=$("noProxy"+no); if(el){ el.disabled=!needsProxy; }
 }
 
 function attendanceChanged(no){
@@ -617,9 +627,10 @@ function copySameCAValues(no){
         a=$(pairs[i][0]); b=$(pairs[i][1]);
         if(a&&b){ b.value=a.value; }
     }
+
+    // v28.23: 同一CAでは出社状況まで引き継ぐが、
+    // 「至急」「代理CA記載なし」などのオプションは依頼ごとに独立させる。
     setAttendance(no,getAttendance(src));
-    setChecked("urgent"+no,checked("urgent"+src));
-    setChecked("noProxy"+no,checked("noProxy"+src));
     updateAttendanceUI(no);
 }
 
@@ -888,14 +899,17 @@ function submitConfirmedRequest(){
     }
 
     var requester=$("requesterName").innerText;
-    var requestId=createRequestId(requester);
+    // Pendingファイルを1送信単位でまとめるための内部ID。CSVには出力しない。
+    var packageId="PKG-"+createRequestId(requester,0);
     var sentAt=formatDateTime(new Date());
     var baseName=val("requestBase");
     var lines=[];
     var pendingPath="";
 
+    // v28.23: RequestIDは依頼ごとに個別発行する。
     for(i=0;i<requests.length;i++){
-        lines.push(makeCsvLine(requestId,sentAt,baseName,requester,requests[i]));
+        var rowRequestId=createRequestId(requester,requests[i].requestNo);
+        lines.push(makeCsvLine(rowRequestId,sentAt,baseName,requester,requests[i]));
     }
 
     try{
@@ -905,7 +919,7 @@ function submitConfirmedRequest(){
         pendingPath=savePendingPackage(
             baseName,
             requester,
-            requestId,
+            packageId,
             sentAt,
             requests,
             lines,
@@ -1565,18 +1579,18 @@ function getPendingFolderPath(){
     return desktop+"\\"+PENDING_FOLDER_NAME;
 }
 
-function savePendingPackage(baseName,requester,requestId,sentAt,requests,lines,csvFolder){
+function savePendingPackage(baseName,requester,packageId,sentAt,requests,lines,csvFolder){
     var fso=new ActiveXObject("Scripting.FileSystemObject");
     var folderPath=getPendingFolderPath();
 
     ensureFolder(fso,folderPath);
 
-    var fileName=sanitizeFileName(requestId)+".csv";
+    var fileName=sanitizeFileName(packageId)+".csv";
     var filePath=folderPath+"\\"+fileName;
 
     // 万一同名があれば上書きせず別名にする
     if(fso.FileExists(filePath)){
-        fileName=sanitizeFileName(requestId)+"_"+String(new Date().getTime())+".csv";
+        fileName=sanitizeFileName(packageId)+"_"+String(new Date().getTime())+".csv";
         filePath=folderPath+"\\"+fileName;
     }
 
@@ -1612,7 +1626,7 @@ function ensureFolder(fso,folderPath){
 }
 
 function makeHeaderLine(){
-    return "送信日時,RequestID,拠点,依頼者,依頼番号,組織,CA名,出社状況,代理CA1,代理CA2,代理CA3,オプション,メールメモ,処理日時,期日または面接日程,タイプ";
+    return "送信日時,拠点,依頼者,依頼No.,組織,CA名,出社状況,代理CA1,代理CA2,代理CA3,オプション,メールメモ,処理日時,期日または面接日程,タイプ,RequestID";
 }
 
 function getCsvOptionValue(req){
@@ -1623,12 +1637,12 @@ function getCsvOptionValue(req){
 
 function makeCsvLine(requestId,sentAt,baseName,requester,req){
     return csvJoin([
-        sentAt,requestId,baseName,requester,String(req.requestNo),
+        sentAt,baseName,requester,String(req.requestNo),
         req.organization,req.caName,req.attendance,
         req.proxyCA1,req.proxyCA2,req.proxyCA3,
         getCsvOptionValue(req),
         req.mailMemo,req.processedAt,req.dueDate,
-        req.type
+        req.type,requestId
     ]);
 }
 
@@ -1644,7 +1658,7 @@ function csvEscape(value){
     return '"'+s+'"';
 }
 
-function createRequestId(requester){
+function createRequestId(requester,requestNo){
     var now=new Date();
     var userPart=String(requester||"USER")
         .replace(/[\\\/:*?"<>|\s]/g,"")
@@ -1656,9 +1670,11 @@ function createRequestId(requester){
     var milli=String(now.getMilliseconds());
     while(milli.length<3){ milli="0"+milli; }
 
+    var requestPart=requestNo>0 ? "-R"+pad2(requestNo) : "";
+
     return formatDate(now)+"-"+
            pad2(now.getHours())+pad2(now.getMinutes())+pad2(now.getSeconds())+milli+"-"+
-           userPart+"-"+rand1;
+           userPart+requestPart+"-"+rand1;
 }
 
 function formatDate(d){
