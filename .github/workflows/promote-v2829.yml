@@ -1,0 +1,86 @@
+name: Promote v28.29 mention form
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/promote-v2829.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply v28.29 and verify
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git apply --check '.staging/v2829-js.patch'
+          git apply '.staging/v2829-js.patch'
+
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('メンション依頼フォーム_HTA_最新版/README.txt')
+          raw = p.read_bytes()
+          text = raw.decode('utf-8-sig')
+          if not text.startswith('メンション依頼フォーム HTA 本番版 v28.29'):
+              header = '''メンション依頼フォーム HTA 本番版 v28.29
+          ============================================================
+
+          ■ v28.29 修正内容
+
+          ・送信ボタン押下後の確認ポップアップに、代理CA情報を追加しました
+          ・出社状況が「公休」または「時短（時間外）」の場合のみ表示します
+          ・代理CA名が入力されている場合：「代理CA名：○○」として表示します（複数名は「、」区切り）
+          ・「代理CA記載なし」が選択されている場合：「代理CA記載なし」と表示します
+          ・出社の場合は従来どおり代理CA情報を表示しません
+          ・同一CA連動、レイアウト、CSV、送信、Pending、Popup、マルチモニター補正はv28.28から変更していません
+
+
+          メンション依頼フォーム HTA 本番版 v28.28
+          ============================================================
+
+          ■ v28.28 修正内容
+
+          ・同一CAチェック時、「代理CA記載なし」を前の依頼へ自動追従するよう変更しました
+          ・前の依頼が「代理CA記載なし」ONの場合：入力中の依頼も自動ON、表示したまま編集不可
+          ・前の依頼がOFFの場合：入力中の依頼では「代理CA記載なし」を非表示
+          ・依頼1→2→3の連鎖にも対応し、親側の変更が子側へ自動反映されます
+          ・「至急」は従来どおり依頼ごとに独立しており、同一CAでは引き継ぎません
+          ・同一CA解除時は通常の出社状況ルールへ戻ります
+          ・レイアウト、CSV、送信、Pending、Popup、マルチモニター補正はv28.27から変更していません
+
+
+          '''
+              p.write_bytes(b'\xef\xbb\xbf' + (header + text).encode('utf-8'))
+          PY
+
+          node --check 'メンション依頼フォーム_HTA_最新版/mention-form.js'
+          node --check 'メンション依頼フォーム_HTA_最新版/mention-request-worker.js'
+
+          test "$(git hash-object 'メンション依頼フォーム_HTA_最新版/mention-form.js')" = '3dadbf9992f6f519b3407435d9e9ca556e42e6c8'
+          test "$(git hash-object 'メンション依頼フォーム_HTA_最新版/mention-form.css')" = '9f4b0a471d2850feb1781e2acaee60a519dc25cd'
+          test "$(git hash-object 'メンション依頼フォーム_HTA_最新版/mention-request-worker.js')" = 'c105e54da9d301813a9cc5a70c96e47f805d7766'
+          test "$(git hash-object 'メンション依頼フォーム_HTA_最新版/メンション依頼フォーム.hta')" = 'd7b5e79fe5a36baa9cf00314a6363640314054c9'
+          test "$(git hash-object 'メンション依頼フォーム_HTA_最新版/書き込み用/このフォルダにCSVが作成されます.txt')" = '6748f66e8e0b929f85c7e7f1bcf7d37e0f3fd3f5'
+          grep -q '本番版 v28.29' 'メンション依頼フォーム_HTA_最新版/README.txt'
+
+          rm -f '.staging/v2829-js.patch'
+          rm -f '.github/workflows/promote-v2829.yml'
+
+      - name: Commit v28.29 latest
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'TAGUCHI-MAKOTO'
+          git config user.email 'akuteon84@gmail.com'
+          git add -A
+          git commit -m 'Promote v28.29 mention form as latest'
+          git push origin main
