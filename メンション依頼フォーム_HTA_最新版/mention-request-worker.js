@@ -92,8 +92,15 @@
         }
     }
 
-    if (!pendingPath || !fso.FileExists(pendingPath)) {
+    if (!pendingPath) {
         WScript.Quit(0);
+    }
+
+    // v28.31: restore a missing Primary Pending from its recovery sidecar.
+    if (!fso.FileExists(pendingPath)) {
+        if (!restorePrimaryFromRecovery(pendingPath)) {
+            WScript.Quit(0);
+        }
     }
 
     if (!csvFolder || !fso.FolderExists(csvFolder)) {
@@ -124,7 +131,9 @@
 
     while ((new Date().getTime() - startedAt) < MAX_RETRY_MS) {
         if (!fso.FileExists(pendingPath)) {
-            WScript.Quit(0);
+            if (!restorePrimaryFromRecovery(pendingPath)) {
+                WScript.Quit(0);
+            }
         }
 
         if (!tryAcquireLock(lockPath)) {
@@ -134,16 +143,19 @@
 
         try {
             // Another worker may have completed this Pending while we waited.
+            // If only Primary disappeared but Recovery still exists, restore and continue.
             if (!fso.FileExists(pendingPath)) {
-                releaseLock(lockPath);
-                WScript.Quit(0);
+                if (!restorePrimaryFromRecovery(pendingPath)) {
+                    releaseLock(lockPath);
+                    WScript.Quit(0);
+                }
             }
 
             writeMissingRowsAndVerify(targetPath, pending);
 
             // Keep the shared lock until Pending deletion completes.
             // This prevents duplicate success popups from concurrent workers.
-            if (deletePendingWithRetry(pendingPath)) {
+            if (deletePendingPackageWithRetry(pendingPath)) {
                 releaseLock(lockPath);
                 showSuccessPopupWhenReady(pendingPath);
                 WScript.Quit(0);
@@ -168,6 +180,40 @@
 
 
     function readPendingCsv(path) {
+        var primaryError = null;
+
+        try {
+            return readPendingCsvCore(path);
+        } catch (ePrimary) {
+            primaryError = ePrimary;
+        }
+
+        /*
+          v28.31:
+          If the Primary Pending is structurally incomplete/corrupt, validate the
+          recovery sidecar first. Only a valid recovery copy may overwrite Primary.
+        */
+        var recoveryPath = recoveryPathFromPending(path);
+
+        if (!fso.FileExists(recoveryPath)) {
+            throw primaryError;
+        }
+
+        try {
+            readPendingCsvCore(recoveryPath);
+        } catch (eRecovery) {
+            throw new Error("PENDING_AND_RECOVERY_INVALID");
+        }
+
+        if (!copyRecoveryToPrimary(recoveryPath, path)) {
+            throw new Error("PENDING_SELF_REPAIR_FAILED");
+        }
+
+        return readPendingCsvCore(path);
+    }
+
+
+    function readPendingCsvCore(path) {
         var text = readText(path);
         var rows = parseCsv(text);
 
@@ -177,6 +223,7 @@
 
         var schema = detectHeader(rows[0]);
         var expectedColumns = expectedColumnCount(schema);
+        var expectedRequestCount = expectedRequestCountFromPendingPath(path);
 
         var records = [];
         var baseName = "";
@@ -228,12 +275,90 @@
             throw new Error("PENDING_NO_DATA");
         }
 
+        // v28.30: New Pending files carry the original request count in the
+        // filename (__N1 .. __N3). Refuse to write if rows were partially lost.
+        // Old Pending files have no marker and keep the legacy replay behavior.
+        if (expectedRequestCount > 0) {
+            if (records.length !== expectedRequestCount) {
+                throw new Error("PENDING_REQUEST_COUNT_MISMATCH");
+            }
+
+            for (i = 1; i <= expectedRequestCount; i++) {
+                if (!requestNos[String(i)]) {
+                    throw new Error("PENDING_REQUEST_SEQUENCE_MISMATCH");
+                }
+            }
+        }
+
         return {
             sentAt: sentAt,
             baseName: baseName,
             schema: schema,
             records: records
         };
+    }
+
+    function recoveryPathFromPending(path) {
+        return String(path || "") + ".recovery";
+    }
+
+
+    function restorePrimaryFromRecovery(path) {
+        var recoveryPath = recoveryPathFromPending(path);
+
+        if (!fso.FileExists(recoveryPath)) {
+            return false;
+        }
+
+        try {
+            // Validate recovery before recreating Primary.
+            readPendingCsvCore(recoveryPath);
+        } catch (e) {
+            return false;
+        }
+
+        return copyRecoveryToPrimary(recoveryPath, path);
+    }
+
+
+    function copyRecoveryToPrimary(recoveryPath, primaryPath) {
+        var i;
+
+        for (i = 0; i < 5; i++) {
+            try {
+                if (fso.FileExists(primaryPath)) {
+                    fso.DeleteFile(primaryPath, true);
+                }
+
+                fso.CopyFile(recoveryPath, primaryPath, false);
+
+                if (fso.FileExists(primaryPath)) {
+                    return true;
+                }
+            } catch (e) {
+            }
+
+            WScript.Sleep(150 + Math.floor(Math.random() * 350));
+        }
+
+        return fso.FileExists(primaryPath);
+    }
+
+
+    function expectedRequestCountFromPendingPath(path) {
+        var name = String(fso.GetFileName(path) || "");
+        var match = /__N([1-3])(?:_|\.|$)/i.exec(name);
+
+        if (!match) {
+            return 0;
+        }
+
+        var count = parseInt(match[1], 10);
+        if (isNaN(count) || count < 1 || count > 3) {
+            return 0;
+        }
+
+        return count;
     }
 
     function writeMissingRowsAndVerify(targetPath, pending) {
@@ -418,7 +543,23 @@
     }
 
 
-    function deletePendingWithRetry(path) {
+    function deletePendingPackageWithRetry(path) {
+        var recoveryPath = recoveryPathFromPending(path);
+
+        /*
+          Delete Recovery first. If that fails, keep Primary so the form still
+          sees an unsent Pending. If Recovery is deleted but Primary deletion
+          fails, a retry is safe because shared-CSV verification/dedupe remains.
+        */
+        if (!deleteFileWithRetry(recoveryPath)) {
+            return false;
+        }
+
+        return deleteFileWithRetry(path);
+    }
+
+
+    function deleteFileWithRetry(path) {
         var i;
 
         if (!fso.FileExists(path)) {

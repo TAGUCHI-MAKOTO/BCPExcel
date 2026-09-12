@@ -1,4 +1,4 @@
-﻿// v28.23: CSV列順・依頼別RequestID・マルチモニター位置保持・同一CAオプション非連動
+﻿// v28.30: 退避CSVの期待依頼数をファイル名へ保持し、部分欠落をWorkerで検知
 var CSV_SUBFOLDER_NAME = "書き込み用";
 var PENDING_FOLDER_NAME = "MentionRequest_Pending";
 var BACKGROUND_WORKER_NAME = "mention-request-worker.js";
@@ -1522,6 +1522,7 @@ var pendingSuccessHideTimer=null;
 
 function getPendingFilePaths(){
     var result=[];
+    var recoveries=[];
     var fso,shell,pendingFolder,folder,files,enumerator,file;
 
     try{
@@ -1540,8 +1541,33 @@ function getPendingFilePaths(){
         for(;!enumerator.atEnd();enumerator.moveNext()){
             file=enumerator.item();
             var ext=String(fso.GetExtensionName(file.Name)).toLowerCase();
+            var filePath=String(file.Path);
+            var lowerName=String(file.Name).toLowerCase();
+
             if(ext==="csv"){
-                result.push(String(file.Path));
+                result.push(filePath);
+            }else if(ext==="recovery" && lowerName.indexOf(".csv.recovery")===lowerName.length-13){
+                recoveries.push(filePath);
+            }
+        }
+
+        /*
+          v28.31:
+          通常Pendingだけが消えて復旧用コピーが残った場合も、
+          起動時／手動再送時にPrimary CSVを復元してWorkerへ渡す。
+          .recovery はPending件数には数えない。
+        */
+        for(var i=0;i<recoveries.length;i++){
+            var recoveryPath=recoveries[i];
+            var primaryPath=recoveryPath.substring(0,recoveryPath.length-9);
+
+            if(!fso.FileExists(primaryPath)){
+                try{
+                    fso.CopyFile(recoveryPath,primaryPath,false);
+                    result.push(primaryPath);
+                }catch(copyErr){
+                    // 復元できない場合はコピーを残したままにする。
+                }
             }
         }
     }catch(err){
@@ -1775,12 +1801,22 @@ function savePendingPackage(baseName,requester,packageId,sentAt,requests,lines,c
 
     ensureFolder(fso,folderPath);
 
-    var fileName=sanitizeFileName(packageId)+".csv";
+    // v28.30:
+    // 退避CSVが途中で欠落してもWorkerが「本来の依頼数」を判定できるよう、
+    // ファイル名へ期待依頼数を __N1 ～ __N3 の形式で保持する。
+    // CSV本体の16列構成は変更しない。
+    var expectedRequestCount=requests && requests.length ? requests.length : lines.length;
+    if(expectedRequestCount<1 || expectedRequestCount>3){
+        throw new Error("退避CSVの依頼数が不正です。");
+    }
+
+    var pendingStem=sanitizeFileName(packageId)+"__N"+String(expectedRequestCount);
+    var fileName=pendingStem+".csv";
     var filePath=folderPath+"\\"+fileName;
 
     // 万一同名があれば上書きせず別名にする
     if(fso.FileExists(filePath)){
-        fileName=sanitizeFileName(packageId)+"_"+String(new Date().getTime())+".csv";
+        fileName=pendingStem+"_"+String(new Date().getTime())+".csv";
         filePath=folderPath+"\\"+fileName;
     }
 
@@ -1800,6 +1836,44 @@ function savePendingPackage(baseName,requester,packageId,sentAt,requests,lines,c
     }
 
     file.Close();
+
+    /*
+      v28.31:
+      Primary Pendingを完全に保存した後、その内容を復旧用コピーへ複製する。
+      拡張子を .recovery にして、通常のPending列挙対象（*.csv）には含めない。
+      Recovery作成に失敗した場合はPrimaryも削除し、自己修復できない状態で
+      Workerを起動しない。
+    */
+    var recoveryPath=filePath+".recovery";
+
+    try{
+        if(fso.FileExists(recoveryPath)){
+            fso.DeleteFile(recoveryPath,true);
+        }
+
+        fso.CopyFile(filePath,recoveryPath,false);
+
+    }catch(recoveryErr){
+        try{
+            if(fso.FileExists(recoveryPath)){
+                fso.DeleteFile(recoveryPath,true);
+            }
+        }catch(ignoreRecoveryDelete){
+        }
+
+        try{
+            if(fso.FileExists(filePath)){
+                fso.DeleteFile(filePath,true);
+            }
+        }catch(ignorePrimaryDelete){
+        }
+
+        throw new Error(
+            "復旧用退避データを作成できませんでした。\n"+
+            String(recoveryErr.message||recoveryErr.description||recoveryErr)
+        );
+    }
+
     return filePath;
 }
 
