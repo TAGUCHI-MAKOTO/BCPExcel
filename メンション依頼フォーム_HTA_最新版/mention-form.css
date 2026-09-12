@@ -957,10 +957,10 @@ select:focus{
 .option-zone{
     width:148px;
     margin-left:0;
-    margin-right:12px;
+    margin-right:0;
 }
 
-/* 左側は (160 + 12) × 2 + (160 + 32) + (148 + 12) × 2 = 856px。 */
+/* 左側は CA名後から8px右へ寄せつつ、右端位置は維持。 */
 .detail-zone{
     float:right;
     width:calc(100% - 856px);
@@ -1026,6 +1026,7 @@ select:focus{
 .attendance-zone{
     float:left;
     width:148px;
+    margin-left:12px;
     margin-right:12px;
 }
 .attendance-zone .group-title{

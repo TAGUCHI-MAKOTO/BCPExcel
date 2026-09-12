@@ -103,6 +103,8 @@ var visibleRequestCount = 1;
 var layoutTimer = null;
 var revealTimer = null;
 var hasPositionedWindow = false;
+var lastAvailLeft = 0;
+var lastAvailTop = 0;
 var lastAvailWidth = 0;
 var lastAvailHeight = 0;
 var screenWatchTimer = null;
@@ -127,8 +129,11 @@ function initApp(){
         setStatus("書き込み用フォルダが見つかりません");
     }
 
-    lastAvailWidth=screen.availWidth;
-    lastAvailHeight=screen.availHeight;
+    var initialWorkArea=getCurrentWorkArea();
+    lastAvailLeft=initialWorkArea.left;
+    lastAvailTop=initialWorkArea.top;
+    lastAvailWidth=initialWorkArea.width;
+    lastAvailHeight=initialWorkArea.height;
 
     // 初回は画面を見せる前にサイズを確定
     resizeApp(true);
@@ -277,15 +282,20 @@ function startScreenWatcher(){
 
     screenWatchTimer=window.setInterval(function(){
         try{
-            var w=screen.availWidth;
-            var h=screen.availHeight;
+            var area=getCurrentWorkArea();
 
-            if(w!==lastAvailWidth || h!==lastAvailHeight){
-                lastAvailWidth=w;
-                lastAvailHeight=h;
+            if(area.left!==lastAvailLeft ||
+               area.top!==lastAvailTop ||
+               area.width!==lastAvailWidth ||
+               area.height!==lastAvailHeight){
+                lastAvailLeft=area.left;
+                lastAvailTop=area.top;
+                lastAvailWidth=area.width;
+                lastAvailHeight=area.height;
 
-                // 解像度やWindows表示倍率の変更後に自動再フィット
-                resizeApp(true);
+                // 別モニターへ移動した場合や、解像度・表示倍率・タスクバー領域が変わった場合も
+                // 現在いるモニターの作業領域内へ再フィットする。
+                resizeApp(false);
             }
         }catch(err){
         }
@@ -360,12 +370,145 @@ function getCurrentChromeSize(){
     return {width:chromeW,height:chromeH};
 }
 
+function isFiniteScreenNumber(value){
+    var n=Number(value);
+    return !isNaN(n) && isFinite(n);
+}
+
+function getCurrentWindowPosition(){
+    var left=0;
+    var top=0;
+
+    try{
+        if(isFiniteScreenNumber(window.screenLeft)){
+            left=Number(window.screenLeft);
+        }else if(isFiniteScreenNumber(window.screenX)){
+            left=Number(window.screenX);
+        }
+    }catch(errLeft){
+    }
+
+    try{
+        if(isFiniteScreenNumber(window.screenTop)){
+            top=Number(window.screenTop);
+        }else if(isFiniteScreenNumber(window.screenY)){
+            top=Number(window.screenY);
+        }
+    }catch(errTop){
+    }
+
+    return {left:left,top:top};
+}
+
+function getCurrentWorkArea(){
+    var width=0;
+    var height=0;
+    var left=0;
+    var top=0;
+
+    try{
+        width=isFiniteScreenNumber(screen.availWidth) ? Number(screen.availWidth) : Number(screen.width||0);
+        height=isFiniteScreenNumber(screen.availHeight) ? Number(screen.availHeight) : Number(screen.height||0);
+
+        /*
+          v28.26:
+          availLeft / availTop はWindowsの仮想スクリーン座標上で、
+          現在のモニターの「タスクバー等を除いた作業領域」の左上を返す。
+          IE/HTA環境で未提供の場合は screen.left / screen.top をfallbackにする。
+        */
+        if(isFiniteScreenNumber(screen.availLeft)){
+            left=Number(screen.availLeft);
+        }else if(isFiniteScreenNumber(screen.left)){
+            left=Number(screen.left);
+        }
+
+        if(isFiniteScreenNumber(screen.availTop)){
+            top=Number(screen.availTop);
+        }else if(isFiniteScreenNumber(screen.top)){
+            top=Number(screen.top);
+        }
+    }catch(err){
+    }
+
+    if(width<=0){ width=1920; }
+    if(height<=0){ height=1080; }
+
+    return {left:left,top:top,width:width,height:height};
+}
+
+function fitCurrentWindowIntoWorkArea(fallbackW,fallbackH,preferUpperCenter){
+    try{
+        var area=getCurrentWorkArea();
+        var pos=getCurrentWindowPosition();
+        var outer=getWindowOuterSize(fallbackW,fallbackH);
+        var outerW=outer.width||fallbackW||0;
+        var outerH=outer.height||fallbackH||0;
+        var safeMargin=8;
+        var minLeft=area.left+safeMargin;
+        var minTop=area.top+safeMargin;
+        var maxLeft=area.left+area.width-outerW-safeMargin;
+        var maxTop=area.top+area.height-outerH-safeMargin;
+        var moveX=pos.left;
+        var moveY=pos.top;
+
+        /*
+          ウィンドウが作業領域より大きい場合は、まず作業領域内に収まるサイズへ補正。
+          通常はresizeApp側ですでに上限設定済みだが、DPI差などによる実寸差の保険。
+        */
+        if(outerW>area.width-(safeMargin*2) || outerH>area.height-(safeMargin*2)){
+            var correctedW=Math.min(outerW,Math.max(320,area.width-(safeMargin*2)));
+            var correctedH=Math.min(outerH,Math.max(240,area.height-(safeMargin*2)));
+            window.resizeTo(correctedW,correctedH);
+            outerW=correctedW;
+            outerH=correctedH;
+            maxLeft=area.left+area.width-outerW-safeMargin;
+            maxTop=area.top+area.height-outerH-safeMargin;
+        }
+
+        if(maxLeft<minLeft){
+            minLeft=area.left;
+            maxLeft=area.left;
+        }
+        if(maxTop<minTop){
+            minTop=area.top;
+            maxTop=area.top;
+        }
+
+        if(moveX<minLeft){ moveX=minLeft; }
+        if(moveX>maxLeft){ moveX=maxLeft; }
+        if(moveY<minTop){ moveY=minTop; }
+        if(moveY>maxTop){ moveY=maxTop; }
+
+        /*
+          v28.27:
+          2件目/3件目の展開などでフォームが縦に伸びたときは、
+          単に下端へ収めるだけではなく「中央より少し上」を目安に持ち上げる。
+          すでにそれより上に置かれている場合は、ユーザーの位置を尊重して動かさない。
+        */
+        if(preferUpperCenter){
+            var freeHeight=Math.max(0,area.height-outerH-(safeMargin*2));
+            var preferredTop=area.top+safeMargin+Math.round(freeHeight*0.38);
+
+            if(preferredTop<minTop){ preferredTop=minTop; }
+            if(preferredTop>maxTop){ preferredTop=maxTop; }
+            if(moveY>preferredTop){ moveY=preferredTop; }
+        }
+
+        if(Math.abs(moveX-pos.left)>1 || Math.abs(moveY-pos.top)>1){
+            window.moveTo(Math.round(moveX),Math.round(moveY));
+        }
+    }catch(err){
+    }
+}
+
 function centerCurrentWindow(outerW,outerH){
     try{
-        var moveX=Math.max(0,Math.floor((screen.availWidth-outerW)/2));
-        var moveY=Math.max(0,Math.floor((screen.availHeight-outerH)/2));
+        var area=getCurrentWorkArea();
+        var moveX=area.left+Math.max(0,Math.floor((area.width-outerW)/2));
+        var moveY=area.top+Math.max(0,Math.floor((area.height-outerH)/2));
         window.moveTo(moveX,moveY);
         hasPositionedWindow=true;
+        fitCurrentWindowIntoWorkArea(outerW,outerH);
     }catch(err){
     }
 }
@@ -399,9 +542,10 @@ function resizeApp(centerOnFirst){
             // 現在表示されているカード数に応じた自然高さ
             var naturalClientH=app.offsetHeight+30;
 
-            // 24インチ 1920×1080 を想定し、画面端へ少し余白を残す
-            var maxOuterW=screen.availWidth-40;
-            var maxOuterH=screen.availHeight-34;
+            // 現在いるモニターの作業領域（タスクバー等を除く）を基準に上限を決める。
+            var workArea=getCurrentWorkArea();
+            var maxOuterW=workArea.width-40;
+            var maxOuterH=workArea.height-34;
 
             var wantedW=Math.ceil(naturalClientW+chrome.width);
             var wantedH=Math.ceil(naturalClientH+chrome.height);
@@ -418,12 +562,22 @@ function resizeApp(centerOnFirst){
 
             window.resizeTo(wantedW,wantedH);
 
-            // v28.23: 初回配置時だけ中央寄せする。
-            // 2件目/3件目の追加・取消・送信後リセット・画面監視による再計算では
-            // moveToを呼ばず、現在いるモニター上の位置を維持する。
+            // v28.26:
+            // 初回は「現在いるモニター」の中央へ配置。
+            // 2件目/3件目の展開・取消・送信後リセット時は現在位置を尊重しつつ、
+            // 下端/右端などが作業領域からはみ出す分だけ自動で戻す。
             if(centerOnFirst && !hasPositionedWindow){
                 centerCurrentWindow(wantedW,wantedH);
+            }else{
+                fitCurrentWindowIntoWorkArea(wantedW,wantedH,true);
             }
+
+            // resizeTo直後はHTAフレームの実寸反映が1テンポ遅れる場合があるため、
+            // 非表示中にもう一度実寸で補正してから表示する。
+            window.setTimeout(function(){
+                fitCurrentWindowIntoWorkArea(wantedW,wantedH,!centerOnFirst || hasPositionedWindow);
+            },10);
+
             window.scrollTo(0,0);
 
         }catch(err){
