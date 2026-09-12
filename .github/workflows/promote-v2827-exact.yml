@@ -1,0 +1,51 @@
+name: Promote v28.27 exact source
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '.staging/MentionRequestForm_v28.27_UTF8.zip'
+      - '.github/workflows/promote-v2827-exact.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Replace latest mention form from approved ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/v2827
+          mkdir -p /tmp/v2827
+          unzip -q '.staging/MentionRequestForm_v28.27_UTF8.zip' -d /tmp/v2827
+          test -d '/tmp/v2827/MentionRequestForm_v28.27_UTF8'
+          rm -rf 'メンション依頼フォーム_HTA_最新版'
+          mkdir -p 'メンション依頼フォーム_HTA_最新版'
+          cp -a /tmp/v2827/MentionRequestForm_v28.27_UTF8/. 'メンション依頼フォーム_HTA_最新版/'
+          test -f 'メンション依頼フォーム_HTA_最新版/mention-form.js'
+          test -f 'メンション依頼フォーム_HTA_最新版/mention-form.css'
+          test -f 'メンション依頼フォーム_HTA_最新版/mention-request-worker.js'
+          test -f 'メンション依頼フォーム_HTA_最新版/メンション依頼フォーム.hta'
+          test -f 'メンション依頼フォーム_HTA_最新版/README.txt'
+          test -f 'メンション依頼フォーム_HTA_最新版/書き込み用/このフォルダにCSVが作成されます.txt'
+          rm -f '.staging/MentionRequestForm_v28.27_UTF8.zip'
+          rm -f '.github/workflows/promote-v2827-exact.yml'
+      - name: Commit promoted latest version
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'TAGUCHI-MAKOTO'
+          git config user.email 'akuteon84@gmail.com'
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'No changes to commit.'
+            exit 0
+          fi
+          git commit -m 'Promote v28.27 mention form as latest'
+          git push origin HEAD:main
