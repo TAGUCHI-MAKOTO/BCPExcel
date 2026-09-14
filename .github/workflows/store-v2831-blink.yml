@@ -1,0 +1,149 @@
+name: Store v28.31 blink version
+
+on:
+  push:
+    paths:
+      - '.github/workflows/store-v2831-blink.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  store:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build exact blink folder from latest
+        shell: python
+        run: |
+          from pathlib import Path
+          import shutil, hashlib, subprocess
+
+          src = Path('メンション依頼フォーム_HTA_最新版')
+          dst = Path('メンション依頼フォーム_HTA_点滅版')
+
+          if dst.exists():
+              shutil.rmtree(dst)
+          shutil.copytree(src, dst)
+
+          css = dst / 'mention-form.css'
+          text = css.read_text(encoding='utf-8-sig')
+
+          old_validation = '''.validation-modal {
+              position: absolute;
+              left: 50%;
+              top: 50%;
+              width: 520px;
+              min-height: 190px;
+              margin-left: -260px;
+              margin-top: -95px;
+              border-radius: 10px;
+              border: 2px solid #b5adb5;
+              box-shadow: 0 8px 28px rgba(40, 30, 40, 0.30);
+              padding: 0 0 18px 0;
+              background: #ffffff;
+          }'''
+          new_validation = '''.validation-modal {
+              position: absolute;
+              left: 50%;
+              top: 50%;
+              width: 520px;
+              min-height: 190px;
+              margin-left: -260px;
+              margin-top: -95px;
+              border-radius: 10px;
+              border: 2px solid #b5adb5;
+              box-shadow: 0 8px 28px rgba(40, 30, 40, 0.30);
+              padding: 0 0 18px 0;
+              background: #ffffff;
+              overflow: hidden;
+          }'''
+          if old_validation not in text:
+              raise SystemExit('validation-modal base mismatch')
+          text = text.replace(old_validation, new_validation, 1)
+
+          old_message = '''.send-confirm-modal .modal-message{
+              min-height:145px;
+              padding:20px 28px 10px 28px;
+              text-align:left;
+          }'''
+          new_message = '''.send-confirm-modal .modal-title{
+              padding:10px 20px;
+          }
+
+          .send-confirm-modal .modal-message{
+              min-height:130px;
+              padding:16px 28px 8px 28px;
+              text-align:left;
+          }'''
+          if old_message not in text:
+              raise SystemExit('send-confirm modal base mismatch')
+          text = text.replace(old_message, new_message, 1)
+
+          old_warning = '''.send-confirm-warning{
+              margin:8px 0 6px 0;
+              text-align:center;
+              font-size:20px;
+              font-weight:bold;
+              color:#c62828;
+          }'''
+          new_warning = '''.send-confirm-warning{
+              margin:8px 0 6px 0;
+              text-align:center;
+              font-size:20px;
+              font-weight:bold;
+              color:#c62828;
+              -ms-animation:send-confirm-warning-blink 1.2s steps(1,end) infinite;
+              animation:send-confirm-warning-blink 1.2s steps(1,end) infinite;
+          }
+
+          @-ms-keyframes send-confirm-warning-blink{
+              0%,49%{
+                  opacity:1;
+              }
+              50%,100%{
+                  opacity:0.22;
+              }
+          }
+
+          @keyframes send-confirm-warning-blink{
+              0%,49%{
+                  opacity:1;
+              }
+              50%,100%{
+                  opacity:0.22;
+              }
+          }'''
+          if old_warning not in text:
+              raise SystemExit('send-confirm warning base mismatch')
+          text = text.replace(old_warning, new_warning, 1)
+
+          css.write_text(text, encoding='utf-8-sig')
+
+          def blob_sha(path):
+              data = path.read_bytes()
+              return hashlib.sha1(b'blob ' + str(len(data)).encode() + b'\0' + data).hexdigest()
+
+          expected = {
+              'mention-form.css': '03af1a34dc620a5ea35830de6b4a78de2724965b',
+              'README.txt': '2bbf2b8b2fa89113ea1afd335e0133814c3f47d2',
+              'mention-form.js': 'c0f684a00384fc39f7c535ec32dd0b23e2a3f671',
+              'mention-request-worker.js': 'bfb2e396cbeb2d9c9a6697ca5107494e5dd286c4',
+              'メンション依頼フォーム.hta': 'b5a98a54c93205f508d8767beb6c42c365e1543e',
+              '書き込み用/このフォルダにCSVが作成されます.txt': '6748f66e8e0b929f85c7e7f1bcf7d37e0f3fd3f5',
+          }
+          for rel, sha in expected.items():
+              actual = blob_sha(dst / rel)
+              if actual != sha:
+                  raise SystemExit(f'blob mismatch: {rel}: {actual} != {sha}')
+
+      - name: Commit blink version
+        run: |
+          git config user.name "TAGUCHI-MAKOTO"
+          git config user.email "akuteon84@gmail.com"
+          git add 'メンション依頼フォーム_HTA_点滅版'
+          git commit -m 'Store v28.31 blink version' || exit 0
+          git push
