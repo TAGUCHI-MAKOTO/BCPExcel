@@ -1,0 +1,38 @@
+name: Fix VBA encoding
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-vba-encoding.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix-encoding:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Convert VBA file from CP932 to UTF-8
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('SPH現場コントロール_修正版VBA.bas')
+          raw = p.read_bytes()
+          text = raw.decode('cp932')
+          p.write_text(text, encoding='utf-8', newline='\n')
+          PY
+
+      - name: Commit converted file
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add 'SPH現場コントロール_修正版VBA.bas'
+          if ! git diff --cached --quiet; then
+            git commit -m 'Fix VBA file encoding to UTF-8'
+            git push
+          fi
