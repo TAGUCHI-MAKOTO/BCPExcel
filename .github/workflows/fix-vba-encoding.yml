@@ -15,78 +15,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Repair mixed CP932 and UTF-8 bytes, then save as UTF-8
+      - name: Replace VBA file with clean UTF-8 source
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import base64, gzip
 
-          p = Path('SPH現場コントロール_修正版VBA.bas')
-          raw = p.read_bytes()
+          payload = '''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'''
 
-          def valid_utf8_at(data, i):
-              b = data[i]
-              if 0xC2 <= b <= 0xDF and i + 1 < len(data):
-                  n = 2
-              elif 0xE0 <= b <= 0xEF and i + 2 < len(data):
-                  n = 3
-              elif 0xF0 <= b <= 0xF4 and i + 3 < len(data):
-                  n = 4
-              else:
-                  return None
-              seq = data[i:i+n]
-              try:
-                  ch = seq.decode('utf-8')
-              except UnicodeDecodeError:
-                  return None
-              if ch.encode('utf-8') != seq:
-                  return None
-              return ch, n
-
-          out = []
-          i = 0
-          while i < len(raw):
-              # UTF-8 BOM が途中に混入していたら除去
-              if raw[i:i+3] == b'\xef\xbb\xbf':
-                  i += 3
-                  continue
-
-              b = raw[i]
-
-              if b < 0x80:
-                  out.append(chr(b))
-                  i += 1
-                  continue
-
-              u = valid_utf8_at(raw, i)
-              if u is not None:
-                  ch, n = u
-                  out.append(ch)
-                  i += n
-                  continue
-
-              # CP932 half-width kana
-              if 0xA1 <= b <= 0xDF:
-                  out.append(bytes([b]).decode('cp932'))
-                  i += 1
-                  continue
-
-              # CP932 double-byte character
-              if (0x81 <= b <= 0x9F) or (0xE0 <= b <= 0xFC):
-                  if i + 1 < len(raw):
-                      b2 = raw[i + 1]
-                      if (0x40 <= b2 <= 0x7E) or (0x80 <= b2 <= 0xFC):
-                          try:
-                              out.append(raw[i:i+2].decode('cp932'))
-                              i += 2
-                              continue
-                          except UnicodeDecodeError:
-                              pass
-
-              raise UnicodeDecodeError('mixed', raw, i, i + 1, 'unrecognized byte')
-
-          text = ''.join(out)
-          p.write_text(text, encoding='utf-8', newline='\n')
+          data = gzip.decompress(base64.b64decode(payload))
+          Path('SPH現場コントロール_修正版VBA.bas').write_bytes(data)
           PY
 
       - name: Commit converted file
