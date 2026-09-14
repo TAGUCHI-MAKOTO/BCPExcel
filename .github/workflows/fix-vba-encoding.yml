@@ -15,14 +15,72 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Convert VBA file from CP932 to UTF-8
+      - name: Repair mixed CP932 and UTF-8 bytes, then save as UTF-8
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
+
           p = Path('SPH現場コントロール_修正版VBA.bas')
           raw = p.read_bytes()
-          text = raw.decode('cp932')
+
+          def valid_utf8_at(data, i):
+              b = data[i]
+              if 0xC2 <= b <= 0xDF and i + 1 < len(data):
+                  n = 2
+              elif 0xE0 <= b <= 0xEF and i + 2 < len(data):
+                  n = 3
+              elif 0xF0 <= b <= 0xF4 and i + 3 < len(data):
+                  n = 4
+              else:
+                  return None
+              seq = data[i:i+n]
+              try:
+                  ch = seq.decode('utf-8')
+              except UnicodeDecodeError:
+                  return None
+              if ch.encode('utf-8') != seq:
+                  return None
+              return ch, n
+
+          out = []
+          i = 0
+          while i < len(raw):
+              b = raw[i]
+
+              if b < 0x80:
+                  out.append(chr(b))
+                  i += 1
+                  continue
+
+              u = valid_utf8_at(raw, i)
+              if u is not None:
+                  ch, n = u
+                  out.append(ch)
+                  i += n
+                  continue
+
+              # CP932 half-width kana
+              if 0xA1 <= b <= 0xDF:
+                  out.append(bytes([b]).decode('cp932'))
+                  i += 1
+                  continue
+
+              # CP932 double-byte character
+              if (0x81 <= b <= 0x9F) or (0xE0 <= b <= 0xFC):
+                  if i + 1 < len(raw):
+                      b2 = raw[i + 1]
+                      if (0x40 <= b2 <= 0x7E) or (0x80 <= b2 <= 0xFC):
+                          try:
+                              out.append(raw[i:i+2].decode('cp932'))
+                              i += 2
+                              continue
+                          except UnicodeDecodeError:
+                              pass
+
+              raise UnicodeDecodeError('mixed', raw, i, i + 1, 'unrecognized byte')
+
+          text = ''.join(out)
           p.write_text(text, encoding='utf-8', newline='\n')
           PY
 
