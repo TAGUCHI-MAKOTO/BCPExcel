@@ -46,6 +46,11 @@ jobs:
           out = []
           i = 0
           while i < len(raw):
+              # UTF-8 BOM が途中に混入していたら除去
+              if raw[i:i+3] == b'\xef\xbb\xbf':
+                  i += 3
+                  continue
+
               b = raw[i]
 
               if b < 0x80:
