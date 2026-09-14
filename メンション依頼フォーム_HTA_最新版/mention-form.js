@@ -1,4 +1,5 @@
-﻿// v28.30: 退避CSVの期待依頼数をファイル名へ保持し、部分欠落をWorkerで検知
+﻿// v28.31.2: Windows作業領域による位置・サイズ同時補正とスクロール対応
+// v28.30: 退避CSVの期待依頼数をファイル名へ保持し、部分欠落をWorkerで検知
 var CSV_SUBFOLDER_NAME = "書き込み用";
 var PENDING_FOLDER_NAME = "MentionRequest_Pending";
 var BACKGROUND_WORKER_NAME = "mention-request-worker.js";
@@ -117,6 +118,7 @@ function initApp(){
     // 受付モーダルのOKを押さずにフォームを閉じた場合も、
     // Workerへ「完了通知を表示してよい」ことを伝える。
     window.onunload=function(){
+        if(typeof MentionLayout!=="undefined"){ MentionLayout.stop(); }
         signalCompletionNotificationReady();
     };
 
@@ -549,6 +551,19 @@ function centerCurrentWindow(outerW,outerH,workArea){
     }
 }
 
+function layoutAdjustmentUnavailable(){
+    // Native helpers may be unavailable under company policy. Keep every control
+    // reachable using the current window's scrollbars; do not guess a monitor origin.
+    if(!$("layoutNotice")){
+        var notice=document.createElement("div");
+        notice.id="layoutNotice";
+        notice.innerText="画面の自動調整が利用できません。スクロール、または最大化して操作してください。";
+        notice.style.cssText="padding:8px 14px;background:#fff4d6;color:#59461b;font-size:13px;";
+        document.body.insertBefore(notice,document.body.firstChild);
+    }
+    showAppAfterLayout();
+}
+
 function resizeApp(centerOnFirst){
     var revision=++layoutRevision;
     hideAppForLayout();
@@ -584,8 +599,24 @@ function resizeApp(centerOnFirst){
             // 現在表示されているカード数に応じた自然高さ
             var naturalClientH=app.offsetHeight+30;
 
+            if(typeof MentionLayout!=="undefined" &&
+               MentionLayout.request(naturalClientW+20,naturalClientH+20,centerOnFirst && !hasPositionedWindow)){
+                // Windows selects the actual current monitor BEFORE resizing and
+                // applies size + position together. Leave browser coordinates alone.
+                hasPositionedWindow=true;
+                window.scrollTo(0,0);
+                return;
+            }
+
             // 現在いるモニターの作業領域（タスクバー等を除く）を基準に上限を決める。
             var workArea=getCurrentWorkArea();
+            if(!canFitWindowToWorkArea(workArea,originalPosition)){
+                // Keep the current on-screen viewport and scroll within it. Expanding
+                // the outer height here caused the v28.31.1 bottom clipping regression.
+                hasPositionedWindow=true;
+                window.scrollTo(0,0);
+                return;
+            }
             var maxOuterW=workArea.width-40;
             var maxOuterH=workArea.height-34;
 

@@ -81,7 +81,7 @@ for (const [label, props] of [
             const twoHeight=f.win.outerHeight;
             f.c.showRequest(3); f.advance();
             assert.equal(f.c.visibleRequestCount,3);
-            assert.ok(f.win.outerHeight>twoHeight, 'card growth still resizes the form');
+            assert.equal(f.win.outerHeight,twoHeight, 'without native geometry, keep the visible viewport and use scrollbars');
             assert.deepEqual(f.position(),[x,y], 'request 3 moved');
             f.c.cancelRequest(3); f.advance();
             f.c.cancelRequest(2); f.advance();
@@ -115,7 +115,7 @@ test('mixed-DPI screen dimensions changing in watcher preserve external location
 });
 test('resize side effect restores original coordinates without a frame-offset drift', () => {
     const f=fixture(); f.place(-1850,150); f.win.resizeShift=[120,25];
-    f.c.showRequest(2); f.advance();
+    f.c.resizeWindowKeepingPosition(1750,700);
     assert.deepEqual(f.position(),[-1850,150]);
 });
 test('minimized window is not resized or moved by watcher/layout', () => {
@@ -146,6 +146,18 @@ test('unknown window coordinates never cause an invented move to zero', () => {
     f.win.screenLeft=undefined; f.win.screenTop=undefined;
     f.moves.length=0; f.c.showRequest(2); f.advance();
     assert.equal(f.moves.length,0);
+});
+
+test('native layout route uses natural content dimensions without browser relocation', () => {
+    const f=fixture(); f.place(2040,750);
+    const requests=[];
+    f.c.MentionLayout={request:(w,h,initial)=>{requests.push([w,h,initial]); return true;}};
+    const count=f.sizes.length;
+    f.c.showRequest(2); f.advance(); f.c.showRequest(3); f.advance();
+    assert.equal(requests.length,2);
+    assert.ok(requests[1][1]>requests[0][1]);
+    assert.deepEqual(f.position(),[2040,750]);
+    assert.equal(f.sizes.length,count,'browser resize must not race native monitor selection');
 });
 
 let failed=0;
