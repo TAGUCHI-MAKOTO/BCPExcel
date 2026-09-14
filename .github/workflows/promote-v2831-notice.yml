@@ -1,0 +1,78 @@
+name: Promote v28.31 information-leak notice
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/promote-v2831-notice.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply minimal notice-only change and verify
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          HTA='メンション依頼フォーム_HTA_最新版/メンション依頼フォーム.hta'
+          CSS='メンション依頼フォーム_HTA_最新版/mention-form.css'
+          JS='メンション依頼フォーム_HTA_最新版/mention-form.js'
+          WORKER='メンション依頼フォーム_HTA_最新版/mention-request-worker.js'
+          README='メンション依頼フォーム_HTA_最新版/README.txt'
+
+          # v28.31 stable base must be intact before this display-only patch.
+          test "$(git hash-object "$HTA")" = 'd7b5e79fe5a36baa9cf00314a6363640314054c9'
+          test "$(git hash-object "$CSS")" = '9f4b0a471d2850feb1781e2acaee60a519dc25cd'
+          test "$(git hash-object "$JS")" = 'c0f684a00384fc39f7c535ec32dd0b23e2a3f671'
+          test "$(git hash-object "$WORKER")" = 'bfb2e396cbeb2d9c9a6697ca5107494e5dd286c4'
+          test "$(git hash-object "$README")" = '2bbf2b8b2fa89113ea1afd335e0133814c3f47d2'
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          hta = Path('メンション依頼フォーム_HTA_最新版/メンション依頼フォーム.hta')
+          css = Path('メンション依頼フォーム_HTA_最新版/mention-form.css')
+
+          hta_data = hta.read_bytes()
+          old_hta = '''            <div class="send-confirm-question">出社状況は相違ないですか？</div>\n            <div id="sendConfirmDetails" class="send-confirm-details"></div>\n        </div>\n        <div class="cancel-modal-actions">'''.encode('utf-8')
+          new_hta = '''            <div class="send-confirm-question">出社状況は相違ないですか？</div>\n            <div id="sendConfirmDetails" class="send-confirm-details"></div>\n        </div>\n        <div class="send-confirm-warning">メールメモに【個人】【企業】情報記載はNGです</div>\n        <div class="cancel-modal-actions">'''.encode('utf-8')
+          if hta_data.count(old_hta) != 1:
+              raise SystemExit('HTA target block mismatch')
+          hta.write_bytes(hta_data.replace(old_hta, new_hta, 1))
+
+          css_data = css.read_bytes()
+          old_css = '''.send-confirm-question{\n    margin-bottom:16px;\n    text-align:center;\n}\n'''.encode('utf-8')
+          new_css = '''.send-confirm-question{\n    margin-bottom:16px;\n    text-align:center;\n    font-size:20px;\n    font-weight:bold;\n}\n\n/* v28.31 Notice: 情報漏洩リスクの注意喚起。送信処理には影響しない表示のみ。 */\n.send-confirm-warning{\n    margin:8px 0 6px 0;\n    text-align:center;\n    font-size:20px;\n    font-weight:bold;\n    color:#c62828;\n}\n'''.encode('utf-8')
+          if css_data.count(old_css) != 1:
+              raise SystemExit('CSS target block mismatch')
+          css.write_bytes(css_data.replace(old_css, new_css, 1))
+          PY
+
+          # Must exactly match the user-approved ZIP.
+          test "$(git hash-object "$HTA")" = 'b5a98a54c93205f508d8767beb6c42c365e1543e'
+          test "$(git hash-object "$CSS")" = '0d1745783f507d69c9fbc9ca9e7e9312bdf49964'
+
+          # Everything outside the requested HTA/CSS display change remains byte-identical.
+          test "$(git hash-object "$JS")" = 'c0f684a00384fc39f7c535ec32dd0b23e2a3f671'
+          test "$(git hash-object "$WORKER")" = 'bfb2e396cbeb2d9c9a6697ca5107494e5dd286c4'
+          test "$(git hash-object "$README")" = '2bbf2b8b2fa89113ea1afd335e0133814c3f47d2'
+
+          rm -f '.github/workflows/promote-v2831-notice.yml'
+
+      - name: Commit approved v28.31 notice layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'TAGUCHI-MAKOTO'
+          git config user.email 'akuteon84@gmail.com'
+          git add -A
+          git commit -m 'Promote v28.31 information-leak notice layout as latest'
+          git push origin main
