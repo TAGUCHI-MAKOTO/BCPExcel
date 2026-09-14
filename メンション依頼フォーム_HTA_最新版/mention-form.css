@@ -1084,6 +1084,17 @@ select:focus{
 .send-confirm-question{
     margin-bottom:16px;
     text-align:center;
+    font-size:20px;
+    font-weight:bold;
+}
+
+/* v28.31 Notice: 情報漏洩リスクの注意喚起。送信処理には影響しない表示のみ。 */
+.send-confirm-warning{
+    margin:8px 0 6px 0;
+    text-align:center;
+    font-size:20px;
+    font-weight:bold;
+    color:#c62828;
 }
 
 .send-confirm-details{
