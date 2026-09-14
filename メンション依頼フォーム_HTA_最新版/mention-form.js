@@ -101,6 +101,8 @@ var TYPE_OPTIONS = [
 
 var visibleRequestCount = 1;
 var layoutTimer = null;
+// v28.31.1: 未取得・不一致のモニター原点に基づくPC側への移動を防止。
+var layoutRevision = 0;
 var revealTimer = null;
 var hasPositionedWindow = false;
 var lastAvailLeft = 0;
@@ -371,13 +373,13 @@ function getCurrentChromeSize(){
 }
 
 function isFiniteScreenNumber(value){
-    var n=Number(value);
-    return !isNaN(n) && isFinite(n);
+    // null/空文字/falseを数値0として扱うと、未取得の座標がPC側の原点になる。
+    return typeof value==="number" && isFinite(value);
 }
 
 function getCurrentWindowPosition(){
-    var left=0;
-    var top=0;
+    var left=null;
+    var top=null;
 
     try{
         if(isFiniteScreenNumber(window.screenLeft)){
@@ -400,21 +402,54 @@ function getCurrentWindowPosition(){
     return {left:left,top:top};
 }
 
+function isUsableWindowPosition(pos){
+    // 最小化中にWindowsが返す(-32000,-32000)付近へは位置補正しない。
+    return isFiniteScreenNumber(pos.left) && isFiniteScreenNumber(pos.top) &&
+           pos.left>-30000 && pos.top>-30000;
+}
+
+function canFitWindowToWorkArea(area,pos){
+    // HTAでは作業領域の原点が未提供、または移動前のモニター情報のままの場合がある。
+    // 現在位置と一致する明示的な領域だけを使い、不明な領域へ移動させない。
+    return isUsableWindowPosition(pos) &&
+           isFiniteScreenNumber(area.left) && isFiniteScreenNumber(area.top) &&
+           pos.left>=area.left && pos.left<area.left+area.width &&
+           pos.top>=area.top && pos.top<area.top+area.height;
+}
+
+function moveWindowPositionTo(left,top){
+    var pos=getCurrentWindowPosition();
+    if(!isUsableWindowPosition(pos)){ return; }
+    var dx=Math.round(left-pos.left);
+    var dy=Math.round(top-pos.top);
+    if(Math.abs(dx)>1 || Math.abs(dy)>1){
+        // IEのscreenLeft/TopとmoveToの枠基準差による位置ずれを避ける。
+        window.moveBy(dx,dy);
+    }
+}
+
+function resizeWindowKeepingPosition(width,height){
+    var pos=getCurrentWindowPosition();
+    window.resizeTo(width,height);
+    if(isUsableWindowPosition(pos)){
+        // resizeTo自体が位置を変えた場合も、変更前のモニターへ戻す。
+        moveWindowPositionTo(pos.left,pos.top);
+    }
+}
+
 function getCurrentWorkArea(){
     var width=0;
     var height=0;
-    var left=0;
-    var top=0;
+    var left=null;
+    var top=null;
 
     try{
         width=isFiniteScreenNumber(screen.availWidth) ? Number(screen.availWidth) : Number(screen.width||0);
         height=isFiniteScreenNumber(screen.availHeight) ? Number(screen.availHeight) : Number(screen.height||0);
 
         /*
-          v28.26:
-          availLeft / availTop はWindowsの仮想スクリーン座標上で、
-          現在のモニターの「タスクバー等を除いた作業領域」の左上を返す。
-          IE/HTA環境で未提供の場合は screen.left / screen.top をfallbackにする。
+          v28.31.1: 未提供の原点はnullのままにする。0や現在座標から推測しない。
+          left/topも取得できなければ、自動位置補正は行わずサイズだけ変更する。
         */
         if(isFiniteScreenNumber(screen.availLeft)){
             left=Number(screen.availLeft);
@@ -436,10 +471,11 @@ function getCurrentWorkArea(){
     return {left:left,top:top,width:width,height:height};
 }
 
-function fitCurrentWindowIntoWorkArea(fallbackW,fallbackH,preferUpperCenter){
+function fitCurrentWindowIntoWorkArea(fallbackW,fallbackH,preferUpperCenter,workArea){
     try{
-        var area=getCurrentWorkArea();
+        var area=workArea||getCurrentWorkArea();
         var pos=getCurrentWindowPosition();
+        if(!canFitWindowToWorkArea(area,pos)){ return; }
         var outer=getWindowOuterSize(fallbackW,fallbackH);
         var outerW=outer.width||fallbackW||0;
         var outerH=outer.height||fallbackH||0;
@@ -458,7 +494,7 @@ function fitCurrentWindowIntoWorkArea(fallbackW,fallbackH,preferUpperCenter){
         if(outerW>area.width-(safeMargin*2) || outerH>area.height-(safeMargin*2)){
             var correctedW=Math.min(outerW,Math.max(320,area.width-(safeMargin*2)));
             var correctedH=Math.min(outerH,Math.max(240,area.height-(safeMargin*2)));
-            window.resizeTo(correctedW,correctedH);
+            resizeWindowKeepingPosition(correctedW,correctedH);
             outerW=correctedW;
             outerH=correctedH;
             maxLeft=area.left+area.width-outerW-safeMargin;
@@ -495,25 +531,26 @@ function fitCurrentWindowIntoWorkArea(fallbackW,fallbackH,preferUpperCenter){
         }
 
         if(Math.abs(moveX-pos.left)>1 || Math.abs(moveY-pos.top)>1){
-            window.moveTo(Math.round(moveX),Math.round(moveY));
+            moveWindowPositionTo(moveX,moveY);
         }
     }catch(err){
     }
 }
 
-function centerCurrentWindow(outerW,outerH){
+function centerCurrentWindow(outerW,outerH,workArea){
     try{
-        var area=getCurrentWorkArea();
+        var area=workArea||getCurrentWorkArea();
+        if(!canFitWindowToWorkArea(area,getCurrentWindowPosition())){ return; }
         var moveX=area.left+Math.max(0,Math.floor((area.width-outerW)/2));
         var moveY=area.top+Math.max(0,Math.floor((area.height-outerH)/2));
-        window.moveTo(moveX,moveY);
-        hasPositionedWindow=true;
-        fitCurrentWindowIntoWorkArea(outerW,outerH);
+        moveWindowPositionTo(moveX,moveY);
+        fitCurrentWindowIntoWorkArea(outerW,outerH,false,area);
     }catch(err){
     }
 }
 
 function resizeApp(centerOnFirst){
+    var revision=++layoutRevision;
     hideAppForLayout();
 
     if(layoutTimer){
@@ -525,6 +562,11 @@ function resizeApp(centerOnFirst){
         try{
             var app=$("app");
             if(!app){return;}
+            var originalPosition=getCurrentWindowPosition();
+            if((isFiniteScreenNumber(originalPosition.left) && originalPosition.left<=-30000) ||
+               (isFiniteScreenNumber(originalPosition.top) && originalPosition.top<=-30000)){
+                return;
+            }
 
             /*
               v19:
@@ -560,22 +602,26 @@ function resizeApp(centerOnFirst){
                 wantedH=maxOuterH;
             }
 
-            window.resizeTo(wantedW,wantedH);
+            resizeWindowKeepingPosition(wantedW,wantedH);
 
-            // v28.26:
-            // 初回は「現在いるモニター」の中央へ配置。
-            // 2件目/3件目の展開・取消・送信後リセット時は現在位置を尊重しつつ、
-            // 下端/右端などが作業領域からはみ出す分だけ自動で戻す。
+            // 位置と一致する作業領域が分かる場合だけ、そのモニター内へ補正する。
+            // 分からない場合は起動位置・ユーザーの移動先を維持する。
             if(centerOnFirst && !hasPositionedWindow){
-                centerCurrentWindow(wantedW,wantedH);
+                centerCurrentWindow(wantedW,wantedH,workArea);
             }else{
-                fitCurrentWindowIntoWorkArea(wantedW,wantedH,true);
+                fitCurrentWindowIntoWorkArea(wantedW,wantedH,true,workArea);
             }
+            hasPositionedWindow=true;
 
             // resizeTo直後はHTAフレームの実寸反映が1テンポ遅れる場合があるため、
-            // 非表示中にもう一度実寸で補正してから表示する。
+            // 同じレイアウトかつユーザーが動かしていない場合のみ再補正する。
+            var fittedPosition=getCurrentWindowPosition();
             window.setTimeout(function(){
-                fitCurrentWindowIntoWorkArea(wantedW,wantedH,!centerOnFirst || hasPositionedWindow);
+                var currentPosition=getCurrentWindowPosition();
+                if(revision!==layoutRevision ||
+                   currentPosition.left!==fittedPosition.left ||
+                   currentPosition.top!==fittedPosition.top){ return; }
+                fitCurrentWindowIntoWorkArea(wantedW,wantedH,!centerOnFirst,workArea);
             },10);
 
             window.scrollTo(0,0);
