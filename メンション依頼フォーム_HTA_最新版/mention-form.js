@@ -111,7 +111,309 @@ var screenWatchTimer = null;
 
 function $(id){ return document.getElementById(id); }
 
+var INSTANCE_LOCK_HEARTBEAT_MS=3000;
+var INSTANCE_LOCK_STALE_MS=12000;
+var INSTANCE_ACTIVATE_POLL_MS=250;
+var instanceLockPath="";
+var instanceLockToken="";
+var instanceLockTimer=null;
+var instanceActivatePath="";
+var instanceActivateTimer=null;
+var instanceTitleRestoreTimer=null;
+var instanceNormalTitle="";
+var instancePreflightResult=null;
+var ownsInstanceLock=false;
+
+function getInstanceLockPath(){
+    var shell=new ActiveXObject("WScript.Shell");
+    var temp=String(shell.ExpandEnvironmentStrings("%TEMP%")||"");
+    if(!temp){ return ""; }
+    return temp+"\\MentionRequestForm.lock";
+}
+
+function readInstanceLockInfo(fso,path){
+    var info={token:"",timestamp:0};
+    var stream=null;
+    try{
+        stream=fso.OpenTextFile(path,1,false);
+        if(!stream.AtEndOfStream){ info.token=String(stream.ReadLine()||""); }
+        if(!stream.AtEndOfStream){ info.timestamp=parseInt(stream.ReadLine(),10)||0; }
+        stream.Close();
+    }catch(err){
+        try{ if(stream){ stream.Close(); } }catch(closeErr){}
+    }
+    return info;
+}
+
+function writeInstanceLockFile(fso,path,token,overwrite){
+    var stream=fso.CreateTextFile(path,overwrite,false);
+    stream.WriteLine(token);
+    stream.WriteLine(String(new Date().getTime()));
+    stream.Close();
+}
+
+function stopInstanceLockHeartbeat(){
+    if(instanceLockTimer){
+        window.clearInterval(instanceLockTimer);
+        instanceLockTimer=null;
+    }
+}
+
+function stopInstanceActivateWatcher(){
+    if(instanceActivateTimer){
+        window.clearInterval(instanceActivateTimer);
+        instanceActivateTimer=null;
+    }
+}
+
+function requestInstanceActivation(path,token){
+    var stream=null;
+    try{
+        var fso=new ActiveXObject("Scripting.FileSystemObject");
+        stream=fso.CreateTextFile(path,true,false);
+        stream.WriteLine(token);
+        stream.Close();
+    }catch(err){
+        try{ if(stream){ stream.Close(); } }catch(closeErr){}
+    }
+}
+
+function restoreInstanceToFront(){
+    var shell=null;
+    var title=document.title;
+    try{
+        shell=new ActiveXObject("WScript.Shell");
+        shell.AppActivate(title);
+    }catch(err){}
+    try{ window.focus(); }catch(focusErr){}
+    window.setTimeout(function(){
+        try{ if(shell){ shell.AppActivate(title); } }catch(activateErr){}
+        try{ if(shell){ shell.SendKeys("% "); } }catch(menuErr){}
+    },60);
+    window.setTimeout(function(){
+        try{ if(shell){ shell.SendKeys("r"); } }catch(restoreErr){}
+    },160);
+    window.setTimeout(function(){
+        try{ if(shell){ shell.AppActivate(title); } }catch(activateErr2){}
+        try{ window.focus(); }catch(focusErr2){}
+    },300);
+}
+
+function checkInstanceActivationRequest(){
+    if(!ownsInstanceLock || !instanceActivatePath){ return; }
+    var stream=null;
+    try{
+        var fso=new ActiveXObject("Scripting.FileSystemObject");
+        if(!fso.FileExists(instanceActivatePath)){ return; }
+        stream=fso.OpenTextFile(instanceActivatePath,1,false);
+        var token=stream.AtEndOfStream ? "" : String(stream.ReadLine()||"");
+        stream.Close();
+        stream=null;
+        try{ fso.DeleteFile(instanceActivatePath,true); }catch(deleteErr){}
+        if(token===instanceLockToken){
+            prepareInstanceActivationTarget(token);
+            window.setTimeout(restoreInstanceToFront,500);
+        }
+    }catch(err){
+        try{ if(stream){ stream.Close(); } }catch(closeErr){}
+    }
+}
+
+function refreshInstanceLock(){
+    if(!ownsInstanceLock || !instanceLockPath){ return; }
+    try{
+        var fso=new ActiveXObject("Scripting.FileSystemObject");
+        if(!fso.FileExists(instanceLockPath)){
+            ownsInstanceLock=false;
+            stopInstanceLockHeartbeat();
+            return;
+        }
+        var info=readInstanceLockInfo(fso,instanceLockPath);
+        if(info.token!==instanceLockToken){
+            ownsInstanceLock=false;
+            stopInstanceLockHeartbeat();
+            return;
+        }
+        writeInstanceLockFile(fso,instanceLockPath,instanceLockToken,true);
+    }catch(err){}
+}
+
+function releaseInstanceLock(){
+    stopInstanceLockHeartbeat();
+    stopInstanceActivateWatcher();
+    if(!ownsInstanceLock || !instanceLockPath){ return; }
+    try{
+        var fso=new ActiveXObject("Scripting.FileSystemObject");
+        if(fso.FileExists(instanceLockPath)){
+            var info=readInstanceLockInfo(fso,instanceLockPath);
+            if(info.token===instanceLockToken){
+                fso.DeleteFile(instanceLockPath,true);
+            }
+        }
+    }catch(err){}
+    try{
+        var fso2=new ActiveXObject("Scripting.FileSystemObject");
+        if(instanceActivatePath && fso2.FileExists(instanceActivatePath)){
+            fso2.DeleteFile(instanceActivatePath,true);
+        }
+    }catch(activateCleanupErr){}
+    ownsInstanceLock=false;
+}
+
+function getInstanceActivationTitle(token){
+    return "MentionRequest_Active_"+String(token||"").replace(/[^0-9A-Za-z_]/g,"");
+}
+
+function prepareInstanceActivationTarget(token){
+    var targetTitle=getInstanceActivationTitle(token);
+    if(!instanceNormalTitle){ instanceNormalTitle=document.title; }
+    try{ document.title=targetTitle; }catch(titleErr){}
+    if(instanceTitleRestoreTimer){
+        window.clearTimeout(instanceTitleRestoreTimer);
+    }
+    instanceTitleRestoreTimer=window.setTimeout(function(){
+        try{ document.title=instanceNormalTitle; }catch(restoreTitleErr){}
+        instanceTitleRestoreTimer=null;
+    },2500);
+}
+
+function activateExistingMentionRequest(token){
+    var originalTitle=document.title;
+    var targetTitle=token ? getInstanceActivationTitle(token) : originalTitle;
+    var shell=null;
+    var activated=false;
+
+    try{
+        document.title="MentionRequest_StartupProbe_"+String(new Date().getTime());
+        shell=new ActiveXObject("WScript.Shell");
+    }catch(err){
+        try{ document.title=originalTitle; }catch(titleErr){}
+        return false;
+    }
+
+    if(!token){
+        try{ activated=!!shell.AppActivate(targetTitle); }catch(syncErr){ activated=false; }
+        if(!activated){
+            try{ document.title=originalTitle; }catch(titleErr2){}
+            return false;
+        }
+        window.setTimeout(function(){
+            try{ shell.SendKeys("% "); }catch(menuErr){}
+        },60);
+        window.setTimeout(function(){
+            try{ shell.SendKeys("r"); }catch(restoreErr){}
+            try{ shell.AppActivate(targetTitle); }catch(finalActivateErr){}
+            try{ window.close(); }catch(closeErr){}
+        },180);
+        return true;
+    }
+
+    var attempts=0;
+    function tryActivateTarget(){
+        attempts++;
+        try{ activated=!!shell.AppActivate(targetTitle); }catch(activateErr){ activated=false; }
+
+        if(activated){
+            try{ shell.SendKeys("% "); }catch(menuErr2){}
+            window.setTimeout(function(){
+                try{ shell.SendKeys("r"); }catch(restoreErr2){}
+            },80);
+            window.setTimeout(function(){
+                try{ shell.AppActivate(targetTitle); }catch(finalActivateErr2){}
+                try{ window.close(); }catch(closeErr2){}
+            },220);
+            return;
+        }
+
+        if(attempts<20){
+            window.setTimeout(tryActivateTarget,80);
+            return;
+        }
+
+        try{ shell.AppActivate(originalTitle); }catch(fallbackActivateErr){}
+        try{ window.close(); }catch(fallbackCloseErr){}
+    }
+
+    window.setTimeout(tryActivateTarget,60);
+    return true;
+}
+
+function suppressDuplicateStartupWindow(){
+    try{ document.documentElement.style.visibility="hidden"; }catch(styleErr){}
+    try{ window.moveTo(-32000,-32000); }catch(moveErr){}
+}
+
+function closeDuplicateInstance(token){
+    suppressDuplicateStartupWindow();
+    if(activateExistingMentionRequest(token)){ return; }
+    window.setTimeout(function(){
+        if(!activateExistingMentionRequest(token)){
+            try{ window.close(); }catch(closeErr){}
+        }
+    },250);
+}
+
+function ensureSingleInstance(){
+    try{
+        var fso=new ActiveXObject("Scripting.FileSystemObject");
+        var path=getInstanceLockPath();
+        var now=new Date().getTime();
+        var info;
+        var age;
+        if(!path){ return true; }
+        if(fso.FileExists(path)){
+            info=readInstanceLockInfo(fso,path);
+            age=info.timestamp ? now-info.timestamp : INSTANCE_LOCK_STALE_MS+1;
+            if(age>=0 && age<=INSTANCE_LOCK_STALE_MS){
+                requestInstanceActivation(path+".activate",info.token);
+                closeDuplicateInstance(info.token);
+                return false;
+            }
+            if(activateExistingMentionRequest()){
+                return false;
+            }
+            try{
+                fso.DeleteFile(path,true);
+            }catch(deleteErr){
+                closeDuplicateInstance();
+                return false;
+            }
+        }
+        instanceLockToken=String(now)+"_"+String(Math.random()).replace(".","");
+        instanceLockPath=path;
+        try{
+            writeInstanceLockFile(fso,instanceLockPath,instanceLockToken,false);
+        }catch(createErr){
+            closeDuplicateInstance();
+            return false;
+        }
+        ownsInstanceLock=true;
+        instanceNormalTitle=document.title;
+        instanceActivatePath=instanceLockPath+".activate";
+        try{
+            if(fso.FileExists(instanceActivatePath)){
+                fso.DeleteFile(instanceActivatePath,true);
+            }
+        }catch(activateInitErr){}
+        instanceLockTimer=window.setInterval(refreshInstanceLock,INSTANCE_LOCK_HEARTBEAT_MS);
+        instanceActivateTimer=window.setInterval(checkInstanceActivationRequest,INSTANCE_ACTIVATE_POLL_MS);
+        if(window.addEventListener){
+            window.addEventListener("unload",releaseInstanceLock,false);
+        }else if(window.attachEvent){
+            window.attachEvent("onunload",releaseInstanceLock);
+        }
+        return true;
+    }catch(err){
+        return true;
+    }
+}
+
+instancePreflightResult=ensureSingleInstance();
+
 function initApp(){
+    if(instancePreflightResult===false){ return; }
+    if(instancePreflightResult!==true && !ensureSingleInstance()){ return; }
+
     // 受付モーダルのOKを押さずにフォームを閉じた場合も、
     // Workerへ「完了通知を表示してよい」ことを伝える。
     window.onunload=function(){
