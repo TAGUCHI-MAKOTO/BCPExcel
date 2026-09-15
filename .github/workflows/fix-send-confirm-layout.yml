@@ -103,7 +103,7 @@ jobs:
         shell: bash
         run: |
           git add -- 'メンション依頼フォーム_HTA_最新版/mention-form.css'
-          changed="$(git diff --cached --name-only)"
+          changed="$(git -c core.quotePath=false diff --cached --name-only)"
           expected='メンション依頼フォーム_HTA_最新版/mention-form.css'
           if [ "$changed" != "$expected" ]; then
             echo "Unexpected changed files:"
