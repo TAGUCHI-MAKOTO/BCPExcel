@@ -1015,7 +1015,7 @@ function buildSendConfirmDetails(){
             }
         }
 
-        line+="　メールメモ："+trimValue("mailMemo"+i);
+        line+="："+trimValue("mailMemo"+i);
         lines.push(line);
     }
 
