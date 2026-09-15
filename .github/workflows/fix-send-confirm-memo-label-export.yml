@@ -1,0 +1,75 @@
+name: Fix send confirmation memo label and export
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-send-confirm-memo-label-export.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix-and-export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply one-line confirmation display change
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('メンション依頼フォーム_HTA_最新版/mention-form.js')
+          text = path.read_text(encoding='utf-8-sig')
+
+          old = '        line+="　メールメモ："+trimValue("mailMemo"+i);'
+          new = '        line+="："+trimValue("mailMemo"+i);'
+
+          if text.count(old) != 1:
+              raise SystemExit(f'Expected exactly one target line, found {text.count(old)}; no changes made.')
+
+          text = text.replace(old, new, 1)
+          path.write_text(text, encoding='utf-8-sig')
+
+      - name: Verify only target JS changed
+        shell: bash
+        run: |
+          git config core.quotePath false
+          git add -- 'メンション依頼フォーム_HTA_最新版/mention-form.js'
+          changed="$(git diff --cached --name-only)"
+          expected='メンション依頼フォーム_HTA_最新版/mention-form.js'
+          if [ "$changed" != "$expected" ]; then
+            echo "Unexpected changed files:"
+            printf '%s\n' "$changed"
+            exit 1
+          fi
+          git diff --cached --check
+
+      - name: Create download ZIP
+        shell: python
+        run: |
+          from pathlib import Path
+          import zipfile
+
+          root = Path('メンション依頼フォーム_HTA_最新版')
+          out = Path('MentionRequestForm_最新版_20260916_確認表示簡略化.zip')
+          with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as z:
+              for p in root.rglob('*'):
+                  if p.is_file():
+                      z.write(p, p.as_posix())
+
+      - name: Commit target JS only
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Simplify send confirmation memo display'
+          git push
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MentionRequestForm_最新版_20260916_確認表示簡略化
+          path: MentionRequestForm_最新版_20260916_確認表示簡略化.zip
+          if-no-files-found: error
