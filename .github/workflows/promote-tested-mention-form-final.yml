@@ -53,13 +53,7 @@ jobs:
         run: |
           set -euo pipefail
           actual="$(git -c core.quotePath=false diff --name-only | sort)"
-          expected="$(cat <<'EOF' | sort
-メンション依頼フォーム_HTA_最新版/mention-form.css
-メンション依頼フォーム_HTA_最新版/mention-form.js
-メンション依頼フォーム_HTA_最新版/mention-request-worker.js
-メンション依頼フォーム_HTA_最新版/メンション依頼フォーム.hta
-EOF
-)"
+          expected=$'メンション依頼フォーム_HTA_最新版/mention-form.css\nメンション依頼フォーム_HTA_最新版/mention-form.js\nメンション依頼フォーム_HTA_最新版/mention-request-worker.js\nメンション依頼フォーム_HTA_最新版/メンション依頼フォーム.hta'
           if [ "$actual" != "$expected" ]; then
             echo 'Unexpected changed files:'
             printf '%s\n' "$actual"
