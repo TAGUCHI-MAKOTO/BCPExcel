@@ -954,6 +954,18 @@ select:focus{
     margin-right:32px;
 }
 
+/* 代理CAはカード高さを変えず、3名分の高さで最大6名を縦スクロール。 */
+.proxy-ca-scroll{
+    height:136px;
+    overflow-y:auto;
+    overflow-x:hidden;
+    padding-right:4px;
+}
+
+.proxy-ca-scroll input[type="text"]{
+    width:100%;
+}
+
 .option-zone{
     width:148px;
     margin-left:0;
@@ -1070,24 +1082,53 @@ select:focus{
 .send-confirm-modal{
     width:760px;
     min-height:270px;
-    /* JSが動く前でもフォーム中央付近に来るようフォールバックを設定。 */
-    margin-left:-380px;
-    margin-top:-135px;
-    overflow:hidden;
+    box-sizing:border-box;
+    /* 横幅・位置はJS側で確認内容に合わせて調整する。 */
+    margin-left:0;
+    margin-top:0;
+    overflow:visible;
+    background:#f4efff;
+    border-color:#8d6ccf;
+    box-shadow:0 10px 28px rgba(92,66,150,.24);
 }
 
 .send-confirm-modal .modal-title{
     padding:10px 20px;
+    color:#5e4596;
+    background:#eee7fb;
+    border-radius:8px 8px 0 0;
+    overflow:hidden;
 }
 
 .send-confirm-modal .modal-message{
     min-height:125px;
     padding:14px 28px 6px 28px;
     text-align:left;
+    color:#3f3554;
 }
 
 .send-confirm-modal .cancel-modal-actions{
     padding-top:2px;
+}
+
+#sendConfirmYes{
+    background:#7656b5;
+    border-color:#684aa7;
+    color:#ffffff;
+}
+
+#sendConfirmYes:hover{
+    background:#6748a5;
+}
+
+#sendConfirmNo{
+    border-color:#8d6ccf;
+    color:#5e4596;
+    background:#ffffff;
+}
+
+#sendConfirmNo:hover{
+    background:#f1ecfb;
 }
 
 .send-confirm-question{
@@ -1109,6 +1150,8 @@ select:focus{
 .send-confirm-details{
     line-height:1.8;
     text-align:left;
-    white-space:pre-line;
-    word-break:break-all;
+    white-space:pre;
+    word-break:normal;
+    word-wrap:normal;
+    overflow:visible;
 }

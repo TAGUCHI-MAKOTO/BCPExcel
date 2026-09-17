@@ -17,59 +17,13 @@ var completionReadySignaled = false;
    ========================================================= */
 
 function showAcceptedAndPrepareMinimize(){
-    var button=$("systemModalOkButton");
-
-    if(button){
-        button.onclick=confirmAcceptedAndMinimize;
-    }
-
-    showSystemModal(
-        "依頼を受け付けました",
-        "送信処理を開始しました。\n\nOKを押すとフォームを最小化します。",
-        "accepted",
-        true
-    );
-}
-
-function confirmAcceptedAndMinimize(){
-    // Worker側の完了Popupを表示してよいタイミングを通知してから最小化する。
+    // 受付ポップアップとフォーム最小化は行わず、
+    // 従来OK押下時に行っていた後処理だけを即時実行する。
     signalCompletionNotificationReady();
-    hideSystemModal();
 
     // 受付後に入力欄を初期化。拠点・依頼者は既存仕様どおり維持。
     resetAfterSend();
     setStatus("送信中です…");
-
-    // HTML Help ActiveX Control の Minimize コマンドで
-    // 現在のHTAウィンドウを直接最小化する。
-    window.setTimeout(function(){
-        var minimized=false;
-
-        try{
-            var ctrl=$("HHCtrlMinimizeWindowObject");
-            if(ctrl){
-                ctrl.Click();
-                minimized=true;
-            }
-        }catch(minErr){}
-
-        // ActiveX Controlが利用できない環境のみフォールバック。
-        if(!minimized){
-            try{
-                var shell=new ActiveXObject("WScript.Shell");
-                try{
-                    shell.AppActivate(document.title);
-                }catch(activateErr){}
-
-                shell.SendKeys("% ");
-                window.setTimeout(function(){
-                    try{
-                        shell.SendKeys("n");
-                    }catch(keyErr2){}
-                },180);
-            }catch(keyErr1){}
-        }
-    },150);
 }
 
 var BASE_OPTIONS = [
@@ -912,6 +866,9 @@ function collectRequest(no){
         proxyCA1:useProxy ? val("proxyCA"+no+"_1") : "",
         proxyCA2:useProxy ? val("proxyCA"+no+"_2") : "",
         proxyCA3:useProxy ? val("proxyCA"+no+"_3") : "",
+        proxyCA4:useProxy ? val("proxyCA"+no+"_4") : "",
+        proxyCA5:useProxy ? val("proxyCA"+no+"_5") : "",
+        proxyCA6:useProxy ? val("proxyCA"+no+"_6") : "",
         attendance:attendance,
         noProxy:noProxy,
         mailMemo:val("mailMemo"+no),
@@ -925,8 +882,9 @@ function collectRequest(no){
 
 function hasAnyInput(req){
     return !!(req.organization||req.caName||req.proxyOrganization||req.proxyCA1||
-              req.proxyCA2||req.proxyCA3||req.mailMemo||req.processedAt||
-              req.dueDate||req.attendance||req.noProxy||req.shortTime||req.urgent||req.type);
+              req.proxyCA2||req.proxyCA3||req.proxyCA4||req.proxyCA5||req.proxyCA6||
+              req.mailMemo||req.processedAt||req.dueDate||req.attendance||
+              req.noProxy||req.shortTime||req.urgent||req.type);
 }
 
 function validateForm(){
@@ -974,7 +932,9 @@ function validateRequestSection(i){
     }
 
     if(attendance!=="出社" && !checked("noProxy"+i) &&
-       !trimValue("proxyCA"+i+"_1") && !trimValue("proxyCA"+i+"_2") && !trimValue("proxyCA"+i+"_3")){
+       !trimValue("proxyCA"+i+"_1") && !trimValue("proxyCA"+i+"_2") &&
+       !trimValue("proxyCA"+i+"_3") && !trimValue("proxyCA"+i+"_4") &&
+       !trimValue("proxyCA"+i+"_5") && !trimValue("proxyCA"+i+"_6")){
         markError("proxyCA"+i+"_1");
         showValidationModal(i,"依頼"+i+"：代理CA名を入力してください（記載しない場合は「代理CA記載なし」を選択）","proxyCA"+i+"_1");
         return false;
@@ -1046,12 +1006,19 @@ function updateAttendanceUI(no){
     if(!working){ setChecked("urgent"+no,false); }
     if(!needsProxy){ setChecked("noProxy"+no,false); }
     var noProxy=needsProxy && checked("noProxy"+no);
-    for(i=1;i<=3;i++){
+    var proxyEnabled=!locked && needsProxy && !noProxy;
+    var proxyScroll=null;
+    for(i=1;i<=6;i++){
         el=$("proxyCA"+no+"_"+i);
         if(el){
+            if(i===1){ proxyScroll=el.parentNode; }
             if(!needsProxy || noProxy){ el.value=""; }
-            el.disabled=locked || !needsProxy || noProxy;
+            el.disabled=!proxyEnabled;
         }
+    }
+    if(proxyScroll){
+        proxyScroll.style.overflowY=proxyEnabled ? "auto" : "hidden";
+        if(!proxyEnabled){ proxyScroll.scrollTop=0; }
     }
 
     // オプション見出しは常時表示。状態に応じて選択項目だけを切り替える。
@@ -1091,7 +1058,10 @@ function getSameCAFieldPairs(no){
         ["ca"+src,"ca"+no],
         ["proxyCA"+src+"_1","proxyCA"+no+"_1"],
         ["proxyCA"+src+"_2","proxyCA"+no+"_2"],
-        ["proxyCA"+src+"_3","proxyCA"+no+"_3"]
+        ["proxyCA"+src+"_3","proxyCA"+no+"_3"],
+        ["proxyCA"+src+"_4","proxyCA"+no+"_4"],
+        ["proxyCA"+src+"_5","proxyCA"+no+"_5"],
+        ["proxyCA"+src+"_6","proxyCA"+no+"_6"]
     ];
 }
 
@@ -1174,7 +1144,7 @@ function bindSameCASync(){
     for(no=1;no<=2;no++){
         bindSameCAEvent("org"+no);
         bindSameCAEvent("ca"+no);
-        for(i=1;i<=3;i++){ bindSameCAEvent("proxyCA"+no+"_"+i); }
+        for(i=1;i<=6;i++){ bindSameCAEvent("proxyCA"+no+"_"+i); }
     }
 }
 
@@ -1309,7 +1279,7 @@ function buildSendConfirmDetails(){
             }else{
                 var proxyNames=[];
                 var j,proxyName;
-                for(j=1;j<=3;j++){
+                for(j=1;j<=6;j++){
                     proxyName=trimValue("proxyCA"+i+"_"+j);
                     if(proxyName){ proxyNames.push(proxyName); }
                 }
@@ -1333,13 +1303,86 @@ function updateSendConfirmDetails(){
 
 function centerSendConfirmModal(){
     var modal=$("sendConfirmModal");
+    var details=$("sendConfirmDetails");
+    var viewportWidth=0;
+    var viewportHeight=0;
+    var gapX=20;
+    var gapY=16;
+    var minWidth=760;
+    var maxWidth=0;
+    var naturalWidth=0;
+    var wantedWidth=0;
+    var left=0;
+    var top=0;
+
     if(!modal){ return; }
 
-    // 表示内容が1～3件で高さが変わっても、実寸を基準に画面中央へ配置する。
-    modal.style.left="50%";
-    modal.style.top="50%";
-    modal.style.marginLeft=String(-Math.round(modal.offsetWidth/2))+"px";
-    modal.style.marginTop=String(-Math.round(modal.offsetHeight/2))+"px";
+    try{
+        viewportWidth=Math.max(
+            document.documentElement ? (document.documentElement.clientWidth||0) : 0,
+            document.body ? (document.body.clientWidth||0) : 0
+        );
+    }catch(widthErr){
+        viewportWidth=0;
+    }
+
+    try{
+        viewportHeight=Math.max(
+            document.documentElement ? (document.documentElement.clientHeight||0) : 0,
+            document.body ? (document.body.clientHeight||0) : 0
+        );
+    }catch(heightErr){
+        viewportHeight=0;
+    }
+
+    if(!viewportWidth){ viewportWidth=window.innerWidth||1200; }
+    if(!viewportHeight){ viewportHeight=window.innerHeight||700; }
+
+    maxWidth=Math.max(320,viewportWidth-(gapX*2));
+
+    modal.style.marginLeft="0";
+    modal.style.marginTop="0";
+    modal.style.maxWidth="none";
+    modal.style.maxHeight="none";
+    modal.style.overflow="visible";
+
+    if(details){
+        // まず改行以外では折り返さず、確認文が必要とする自然幅を計測する。
+        details.style.whiteSpace="pre";
+        details.style.wordBreak="normal";
+        details.style.wordWrap="normal";
+        details.style.overflow="visible";
+    }
+
+    modal.style.width=Math.min(minWidth,maxWidth)+"px";
+
+    if(details){
+        naturalWidth=details.scrollWidth||details.offsetWidth||0;
+    }
+
+    // 本文左右余白・枠分を加味して必要な横幅まで自動拡張。
+    wantedWidth=Math.max(minWidth,naturalWidth+90);
+    if(wantedWidth>maxWidth){ wantedWidth=maxWidth; }
+    if(wantedWidth<320){ wantedWidth=320; }
+
+    modal.style.width=Math.round(wantedWidth)+"px";
+
+    if(details && naturalWidth>(wantedWidth-70)){
+        // 画面幅の上限まで広げても収まらない場合だけ自然に折り返す。
+        details.style.whiteSpace="pre-line";
+        details.style.wordBreak="normal";
+        details.style.wordWrap="break-word";
+    }
+
+    // 横幅決定後の実寸で中央へ配置。上下左右には最低限の隙間を残す。
+    left=Math.round((viewportWidth-modal.offsetWidth)/2);
+    top=Math.round((viewportHeight-modal.offsetHeight)/2);
+
+    if(left<gapX){ left=gapX; }
+    if(top<gapY){ top=gapY; }
+
+    modal.style.left=left+"px";
+    modal.style.top=top+"px";
 }
 
 function sendRequest(){
@@ -1434,7 +1477,7 @@ function submitConfirmedRequest(){
         //    フォームを閉じてもWorker自体は継続する。
         launchBackgroundWorker(pendingPath,csvFolder,notBeforeMs);
 
-        // 4. 受付完了を表示。OKでフォーム最小化。
+        // 4. 受付後処理を実行。フォームは表示したまま維持。
         showAcceptedAndPrepareMinimize();
 
     }catch(err){
@@ -1595,6 +1638,9 @@ function copyRequestFields(fromNo,toNo){
     setValue("proxyCA"+toNo+"_1",val("proxyCA"+fromNo+"_1"));
     setValue("proxyCA"+toNo+"_2",val("proxyCA"+fromNo+"_2"));
     setValue("proxyCA"+toNo+"_3",val("proxyCA"+fromNo+"_3"));
+    setValue("proxyCA"+toNo+"_4",val("proxyCA"+fromNo+"_4"));
+    setValue("proxyCA"+toNo+"_5",val("proxyCA"+fromNo+"_5"));
+    setValue("proxyCA"+toNo+"_6",val("proxyCA"+fromNo+"_6"));
     setValue("mailMemo"+toNo,val("mailMemo"+fromNo));
     setValue("processedAt"+toNo,val("processedAt"+fromNo));
     setValue("dueDate"+toNo,val("dueDate"+fromNo));
@@ -1626,6 +1672,13 @@ function clearRequestFields(i){
     setValue("proxyCA"+i+"_1","");
     setValue("proxyCA"+i+"_2","");
     setValue("proxyCA"+i+"_3","");
+    setValue("proxyCA"+i+"_4","");
+    setValue("proxyCA"+i+"_5","");
+    setValue("proxyCA"+i+"_6","");
+    var proxyFirst=$("proxyCA"+i+"_1");
+    if(proxyFirst && proxyFirst.parentNode){
+        proxyFirst.parentNode.scrollTop=0;
+    }
     setValue("mailMemo"+i,"");
     setValue("processedAt"+i,"");
     setValue("dueDate"+i,"");
@@ -2106,7 +2159,7 @@ function savePendingPackage(baseName,requester,packageId,sentAt,requests,lines,c
     // v28.30:
     // 退避CSVが途中で欠落してもWorkerが「本来の依頼数」を判定できるよう、
     // ファイル名へ期待依頼数を __N1 ～ __N3 の形式で保持する。
-    // CSV本体の16列構成は変更しない。
+    // CSV本体は代理CA6名対応の19列構成。
     var expectedRequestCount=requests && requests.length ? requests.length : lines.length;
     if(expectedRequestCount<1 || expectedRequestCount>3){
         throw new Error("退避CSVの依頼数が不正です。");
@@ -2192,7 +2245,7 @@ function ensureFolder(fso,folderPath){
 }
 
 function makeHeaderLine(){
-    return "送信日時,拠点,依頼者,依頼No.,組織,CA名,出社状況,代理CA1,代理CA2,代理CA3,オプション,メールメモ,処理日時,期日または面接日程,タイプ,RequestID";
+    return "送信日時,拠点,依頼者,依頼No.,組織,CA名,出社状況,代理CA1,代理CA2,代理CA3,代理CA4,代理CA5,代理CA6,オプション,メールメモ,処理日時,期日または面接日程,タイプ,RequestID";
 }
 
 function getCsvOptionValue(req){
@@ -2206,6 +2259,7 @@ function makeCsvLine(requestId,sentAt,baseName,requester,req){
         sentAt,baseName,requester,String(req.requestNo),
         req.organization,req.caName,req.attendance,
         req.proxyCA1,req.proxyCA2,req.proxyCA3,
+        req.proxyCA4,req.proxyCA5,req.proxyCA6,
         getCsvOptionValue(req),
         req.mailMemo,req.processedAt,req.dueDate,
         req.type,requestId

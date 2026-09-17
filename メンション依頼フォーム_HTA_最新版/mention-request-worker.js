@@ -13,8 +13,31 @@
     var COMPLETION_READY_POLL_MS = 200;
     var FAILURE_READY_RECENT_MS = 60000;
 
-    // v28.23 current schema: RequestID is last and each request row has its own ID.
+    // Current schema: proxy CA supports up to six names; RequestID remains last.
     var HEADER_LATEST = [
+        "\u9001\u4fe1\u65e5\u6642",
+        "\u62e0\u70b9",
+        "\u4f9d\u983c\u8005",
+        "\u4f9d\u983cNo.",
+        "\u7d44\u7e54",
+        "CA\u540d",
+        "\u51fa\u793e\u72b6\u6cc1",
+        "\u4ee3\u7406CA1",
+        "\u4ee3\u7406CA2",
+        "\u4ee3\u7406CA3",
+        "\u4ee3\u7406CA4",
+        "\u4ee3\u7406CA5",
+        "\u4ee3\u7406CA6",
+        "\u30aa\u30d7\u30b7\u30e7\u30f3",
+        "\u30e1\u30fc\u30eb\u30e1\u30e2",
+        "\u51e6\u7406\u65e5\u6642",
+        "\u671f\u65e5\u307e\u305f\u306f\u9762\u63a5\u65e5\u7a0b",
+        "\u30bf\u30a4\u30d7",
+        "RequestID"
+    ];
+
+    // Previous v28.23 schema retained so already-created 16-column Pending files can replay.
+    var HEADER_V2823 = [
         "\u9001\u4fe1\u65e5\u6642",
         "\u62e0\u70b9",
         "\u4f9d\u983c\u8005",
@@ -705,6 +728,9 @@
 
         // Rollout-day safety: never mix schemas in one CSV.
         if (schema === "latest") {
+            return fso.BuildPath(folder, safeBase + "_" + dateKey + "_proxy6.csv");
+        }
+        if (schema === "v2823") {
             return fso.BuildPath(folder, safeBase + "_" + dateKey + "_v28.23.csv");
         }
         if (schema === "v2822") {
@@ -777,6 +803,7 @@
 
     function detectHeader(row) {
         if (headerMatches(row, HEADER_LATEST)) { return "latest"; }
+        if (headerMatches(row, HEADER_V2823)) { return "v2823"; }
         if (headerMatches(row, HEADER_V2822)) { return "v2822"; }
         if (headerMatches(row, HEADER_LEGACY)) { return "legacy"; }
         throw new Error("HEADER_MISMATCH");
@@ -793,6 +820,7 @@
 
     function expectedColumnCount(schema) {
         if (schema === "latest") { return HEADER_LATEST.length; }
+        if (schema === "v2823") { return HEADER_V2823.length; }
         if (schema === "v2822") { return HEADER_V2822.length; }
         return HEADER_LEGACY.length;
     }
@@ -800,6 +828,7 @@
 
     function headerLine(schema) {
         if (schema === "latest") { return HEADER_LATEST.join(","); }
+        if (schema === "v2823") { return HEADER_V2823.join(","); }
         if (schema === "v2822") { return HEADER_V2822.join(","); }
         return HEADER_LEGACY.join(",");
     }
@@ -811,17 +840,19 @@
 
 
     function baseNameFromRow(row, schema) {
-        return String(row[schema === "latest" ? 1 : 2] || "");
+        return String(row[(schema === "latest" || schema === "v2823") ? 1 : 2] || "");
     }
 
 
     function requestNoFromRow(row, schema) {
-        return String(row[schema === "latest" ? 3 : 4] || "");
+        return String(row[(schema === "latest" || schema === "v2823") ? 3 : 4] || "");
     }
 
 
     function requestIdFromRow(row, schema) {
-        return String(row[schema === "latest" ? 15 : 1] || "");
+        if (schema === "latest") { return String(row[18] || ""); }
+        if (schema === "v2823") { return String(row[15] || ""); }
+        return String(row[1] || "");
     }
 
 
