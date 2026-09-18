@@ -398,7 +398,12 @@ function initApp(){
     startScreenWatcher();
 
     bindSameCASync();
-    for(var no=1;no<=3;no++){ updateAttendanceUI(no); }
+    bindProxyCAFloatClose();
+    bindProxyCAFloatValueWatch();
+    for(var no=1;no<=3;no++){
+        updateAttendanceUI(no);
+        updateProxyCAFloatButton(no);
+    }
 
     /*
       v26:
@@ -1006,19 +1011,31 @@ function updateAttendanceUI(no){
     if(!working){ setChecked("urgent"+no,false); }
     if(!needsProxy){ setChecked("noProxy"+no,false); }
     var noProxy=needsProxy && checked("noProxy"+no);
-    var proxyEnabled=!locked && needsProxy && !noProxy;
-    var proxyScroll=null;
+    var proxyVisible=needsProxy && !noProxy;
+    var proxyEnabled=!locked && proxyVisible;
+    var proxyToggle=$("proxyCAToggle"+no);
+    var extraCount=0;
+
     for(i=1;i<=6;i++){
         el=$("proxyCA"+no+"_"+i);
         if(el){
-            if(i===1){ proxyScroll=el.parentNode; }
-            if(!needsProxy || noProxy){ el.value=""; }
+            if(!proxyVisible){ el.value=""; }
             el.disabled=!proxyEnabled;
         }
     }
-    if(proxyScroll){
-        proxyScroll.style.overflowY=proxyEnabled ? "auto" : "hidden";
-        if(!proxyEnabled){ proxyScroll.scrollTop=0; }
+
+    extraCount=proxyCAExtraCount(no);
+
+    if(proxyToggle){
+        // 編集可能時は通常どおり開閉可。
+        // 同一CAでロック中でも4～6名目がある場合は閲覧用に開閉可。
+        proxyToggle.disabled=!proxyVisible || (locked && extraCount<1);
+    }
+
+    if(!proxyVisible || (locked && extraCount<1)){
+        closeProxyCAFloat(no);
+    }else{
+        updateProxyCAFloatButton(no);
     }
 
     // オプション見出しは常時表示。状態に応じて選択項目だけを切り替える。
@@ -1039,6 +1056,167 @@ function updateAttendanceUI(no){
     }
     el=$("urgent"+no); if(el){ el.disabled=!working; }
     el=$("noProxy"+no); if(el){ el.disabled=locked || !needsProxy; }
+}
+
+function proxyCAExtraCount(no){
+    var i,count=0;
+    for(i=4;i<=6;i++){
+        if(trimValue("proxyCA"+no+"_"+i)){ count++; }
+    }
+    return count;
+}
+
+function isProxyCAFloatOpen(no){
+    var panel=$("proxyCAFloat"+no);
+    return !!panel && String(panel.className||"").indexOf("hidden")<0;
+}
+
+function updateProxyCAFloatButton(no){
+    var button=$("proxyCAToggle"+no);
+    var count=proxyCAExtraCount(no);
+    var badge=$("proxyCABadge"+no);
+    var cls;
+
+    if(!button){ return; }
+    if(badge){ badge.innerText=count>0 ? String(count) : ""; }
+
+    cls=String(button.className||"")
+        .replace(/\bproxy-ca-has-extra\b/g,"")
+        .replace(/\bproxy-ca-float-open\b/g,"")
+        .replace(/^\s+|\s+$/g,"");
+
+    if(count>0){
+        cls+=" proxy-ca-has-extra";
+        button.title="代理CA4～6（"+count+"名入力済み）";
+        button.setAttribute("data-badge",String(count));
+    }else{
+        button.title="代理CA4～6を入力";
+        button.setAttribute("data-badge","");
+    }
+
+    if(isProxyCAFloatOpen(no)){
+        cls+=" proxy-ca-float-open";
+        button.title="追加の代理CAを閉じる";
+        button.setAttribute("aria-label","追加の代理CAを閉じる");
+        button.setAttribute("aria-expanded","true");
+    }else{
+        button.title=count>0 ? "代理CA4～6（"+count+"名入力済み）" : "代理CA4～6を入力";
+        button.setAttribute("aria-label",button.title);
+        button.setAttribute("aria-expanded","false");
+    }
+
+    // 表示アイコンはCSSの疑似要素で描画するため、文字は持たせない。
+    button.innerText="";
+    button.className=cls.replace(/^\s+|\s+$/g,"");
+}
+
+function closeProxyCAFloat(no){
+    var panel=$("proxyCAFloat"+no);
+    if(panel && String(panel.className||"").indexOf("hidden")<0){
+        panel.className=(String(panel.className||"")+" hidden")
+            .replace(/^\s+|\s+$/g,"");
+    }
+    updateProxyCAFloatButton(no);
+}
+
+function closeAllProxyCAFloats(exceptNo){
+    var no;
+    for(no=1;no<=3;no++){
+        if(no!==exceptNo){ closeProxyCAFloat(no); }
+    }
+}
+
+function openProxyCAFloat(no){
+    var panel=$("proxyCAFloat"+no);
+    var button=$("proxyCAToggle"+no);
+
+    if(!panel || (button && button.disabled)){ return; }
+
+    closeAllProxyCAFloats(no);
+
+    panel.className=String(panel.className||"")
+        .replace(/\bhidden\b/g,"")
+        .replace(/^\s+|\s+$/g,"");
+
+    updateProxyCAFloatButton(no);
+
+    window.setTimeout(function(){
+        try{
+            var first=$("proxyCA"+no+"_4");
+            if(first && !first.disabled){ first.focus(); }
+        }catch(err){}
+    },0);
+}
+
+function toggleProxyCAFloat(no,evt){
+    try{
+        if(evt){
+            if(evt.stopPropagation){ evt.stopPropagation(); }
+            evt.cancelBubble=true;
+        }
+    }catch(stopErr){}
+
+    if(isProxyCAFloatOpen(no)){
+        closeProxyCAFloat(no);
+    }else{
+        openProxyCAFloat(no);
+    }
+}
+
+function isInsideProxyCAFloatArea(node){
+    var current=node;
+    var id;
+
+    while(current){
+        id=String(current.id||"");
+        if(id.indexOf("proxyCAField")===0 ||
+           id.indexOf("proxyCAFloat")===0 ||
+           id.indexOf("proxyCAToggle")===0){
+            return true;
+        }
+        current=current.parentNode;
+    }
+
+    return false;
+}
+
+function bindProxyCAFloatClose(){
+    var fn=function(evt){
+        var e=evt||window.event;
+        var target=e ? (e.target||e.srcElement) : null;
+        if(isInsideProxyCAFloatArea(target)){ return; }
+        closeAllProxyCAFloats(0);
+    };
+
+    if(document.addEventListener){
+        document.addEventListener("click",fn,false);
+    }else if(document.attachEvent){
+        document.attachEvent("onclick",fn);
+    }
+}
+
+function bindProxyCAFloatValueWatch(){
+    var no,i,el;
+    var fn=function(){ 
+        updateProxyCAFloatButton(1);
+        updateProxyCAFloatButton(2);
+        updateProxyCAFloatButton(3);
+    };
+
+    for(no=1;no<=3;no++){
+        for(i=4;i<=6;i++){
+            el=$("proxyCA"+no+"_"+i);
+            if(!el){ continue; }
+
+            if(el.addEventListener){
+                el.addEventListener("input",fn,false);
+                el.addEventListener("change",fn,false);
+            }else if(el.attachEvent){
+                el.attachEvent("onkeyup",fn);
+                el.attachEvent("onchange",fn);
+            }
+        }
+    }
 }
 
 function attendanceChanged(no){
@@ -1137,6 +1315,9 @@ function syncAllSameCA(){
     // 必ず依頼1→2→3の順で連鎖を更新する。
     syncSameCATarget(2);
     syncSameCATarget(3);
+    updateProxyCAFloatButton(1);
+    updateProxyCAFloatButton(2);
+    updateProxyCAFloatButton(3);
 }
 
 function bindSameCASync(){
@@ -1675,10 +1856,8 @@ function clearRequestFields(i){
     setValue("proxyCA"+i+"_4","");
     setValue("proxyCA"+i+"_5","");
     setValue("proxyCA"+i+"_6","");
-    var proxyFirst=$("proxyCA"+i+"_1");
-    if(proxyFirst && proxyFirst.parentNode){
-        proxyFirst.parentNode.scrollTop=0;
-    }
+    closeProxyCAFloat(i);
+    updateProxyCAFloatButton(i);
     setValue("mailMemo"+i,"");
     setValue("processedAt"+i,"");
     setValue("dueDate"+i,"");

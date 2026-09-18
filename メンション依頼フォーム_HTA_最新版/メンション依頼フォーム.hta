@@ -100,13 +100,26 @@ End Function
                     <label class="checkline"><input type="radio" name="attendance1" id="attendanceShort1" value="時短（時間外）" onclick="attendanceChanged(1);"> 時短（時間外）</label>
                 </div>
 
-                <div class="field proxy-ca">
+                <div class="field proxy-ca" id="proxyCAField1">
                     <label for="proxyCA1_1">代理CA名</label>
-                    <div class="proxy-ca-scroll">
+                    <div class="proxy-ca-main">
                         <input type="text" id="proxyCA1_1" disabled>
                         <input type="text" id="proxyCA1_2" disabled class="stacked">
                         <input type="text" id="proxyCA1_3" disabled class="stacked">
-                        <input type="text" id="proxyCA1_4" disabled class="stacked">
+                    </div>
+
+                    <button type="button"
+                            id="proxyCAToggle1"
+                            class="proxy-ca-float-toggle"
+                            aria-expanded="false"
+                            title="代理CA4～6を入力"
+                            onclick="toggleProxyCAFloat(1,event);"
+                            disabled>＋</button>
+                    <span id="proxyCABadge1" class="proxy-ca-count-badge" aria-hidden="true"></span>
+
+                    <div id="proxyCAFloat1" class="proxy-ca-float-panel hidden">
+                        <div class="proxy-ca-float-title">追加の代理CA</div>
+                        <input type="text" id="proxyCA1_4" disabled>
                         <input type="text" id="proxyCA1_5" disabled class="stacked">
                         <input type="text" id="proxyCA1_6" disabled class="stacked">
                     </div>
@@ -184,13 +197,26 @@ End Function
                     <label class="checkline"><input type="radio" name="attendance2" id="attendanceShort2" value="時短（時間外）" onclick="attendanceChanged(2);"> 時短（時間外）</label>
                 </div>
 
-                <div class="field proxy-ca">
+                <div class="field proxy-ca" id="proxyCAField2">
                     <label for="proxyCA2_1">代理CA名</label>
-                    <div class="proxy-ca-scroll">
+                    <div class="proxy-ca-main">
                         <input type="text" id="proxyCA2_1" disabled>
                         <input type="text" id="proxyCA2_2" disabled class="stacked">
                         <input type="text" id="proxyCA2_3" disabled class="stacked">
-                        <input type="text" id="proxyCA2_4" disabled class="stacked">
+                    </div>
+
+                    <button type="button"
+                            id="proxyCAToggle2"
+                            class="proxy-ca-float-toggle"
+                            aria-expanded="false"
+                            title="代理CA4～6を入力"
+                            onclick="toggleProxyCAFloat(2,event);"
+                            disabled>＋</button>
+                    <span id="proxyCABadge2" class="proxy-ca-count-badge" aria-hidden="true"></span>
+
+                    <div id="proxyCAFloat2" class="proxy-ca-float-panel hidden">
+                        <div class="proxy-ca-float-title">追加の代理CA</div>
+                        <input type="text" id="proxyCA2_4" disabled>
                         <input type="text" id="proxyCA2_5" disabled class="stacked">
                         <input type="text" id="proxyCA2_6" disabled class="stacked">
                     </div>
@@ -269,13 +295,26 @@ End Function
                     <label class="checkline"><input type="radio" name="attendance3" id="attendanceShort3" value="時短（時間外）" onclick="attendanceChanged(3);"> 時短（時間外）</label>
                 </div>
 
-                <div class="field proxy-ca">
+                <div class="field proxy-ca" id="proxyCAField3">
                     <label for="proxyCA3_1">代理CA名</label>
-                    <div class="proxy-ca-scroll">
+                    <div class="proxy-ca-main">
                         <input type="text" id="proxyCA3_1" disabled>
                         <input type="text" id="proxyCA3_2" disabled class="stacked">
                         <input type="text" id="proxyCA3_3" disabled class="stacked">
-                        <input type="text" id="proxyCA3_4" disabled class="stacked">
+                    </div>
+
+                    <button type="button"
+                            id="proxyCAToggle3"
+                            class="proxy-ca-float-toggle"
+                            aria-expanded="false"
+                            title="代理CA4～6を入力"
+                            onclick="toggleProxyCAFloat(3,event);"
+                            disabled>＋</button>
+                    <span id="proxyCABadge3" class="proxy-ca-count-badge" aria-hidden="true"></span>
+
+                    <div id="proxyCAFloat3" class="proxy-ca-float-panel hidden">
+                        <div class="proxy-ca-float-title">追加の代理CA</div>
+                        <input type="text" id="proxyCA3_4" disabled>
                         <input type="text" id="proxyCA3_5" disabled class="stacked">
                         <input type="text" id="proxyCA3_6" disabled class="stacked">
                     </div>

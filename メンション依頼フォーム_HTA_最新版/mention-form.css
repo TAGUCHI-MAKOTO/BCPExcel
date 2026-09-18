@@ -31,7 +31,7 @@ body {
     margin-bottom: 14px;
     border: 1px solid #d8d2d8;
     border-radius: 7px;
-    overflow: hidden;
+    overflow: visible;
     box-shadow: 0 2px 5px rgba(70, 55, 68, 0.08);
 }
 
@@ -261,7 +261,7 @@ button {
 }
 
 #sendButton {
-    width: 190px;
+    width: calc((100% - 900px) / 3); /* 左側876px + 列間24pxを除いて3等分 */
     height: 60px;
     border: 0;
     border-radius: 6px;
@@ -950,32 +950,174 @@ select:focus{
 
 /* 出社状況とオプションの間に代理CA名を配置。 */
 .proxy-ca{
+    position:relative;
     margin-left:0;
-    margin-right:32px;
+    margin-right:60px; /* 入力欄→＋ 12px、バッジ→オプション 12px */
+    overflow:visible;
 }
 
-/* 代理CAはカード高さを変えず、3名分の高さで最大6名を縦スクロール。 */
-.proxy-ca-scroll{
-    height:136px;
-    overflow-y:auto;
-    overflow-x:hidden;
-    padding-right:4px;
-}
-
-.proxy-ca-scroll input[type="text"]{
+.proxy-ca-main,
+.proxy-ca-main input[type="text"]{
     width:100%;
 }
 
+/* 4～6名目はカードを拡張せず、右側に浮かせて表示する。 */
+.proxy-ca-float-panel{
+    position:absolute;
+    z-index:1300;
+    left:174px;
+    top:-2px;
+    width:198px;
+    padding:12px;
+    border:1px solid #cdbbd9;
+    border-radius:9px;
+    background:#fffaff;
+    box-shadow:0 6px 18px rgba(91,63,107,.16);
+}
+
+.proxy-ca-float-panel .proxy-ca-float-title{
+    padding-right:32px;
+    height:24px;
+    line-height:24px;
+    margin-bottom:8px;
+    color:#684f73;
+    font-size:13px;
+    font-weight:bold;
+    text-align:left;
+}
+
+.proxy-ca-float-panel input[type="text"]{
+    width:100%;
+}
+
+/* 3段目の入力欄と中心を揃えた追加ボタン。 */
+.proxy-ca-float-toggle{
+    position:absolute;
+    z-index:1310;
+    top:126px;
+    right:-40px;
+    width:28px;
+    height:28px;
+    padding:0;
+    border:1px solid #7656ad;
+    border-radius:9px;
+    background:#7f5bbb;
+    box-shadow:0 2px 5px rgba(90,65,125,.18);
+    cursor:pointer;
+}
+
+/* 2本の線で描き、フォントの字形に依存せず中央に配置。 */
+.proxy-ca-float-toggle:before,
+.proxy-ca-float-toggle:after{
+    content:"";
+    position:absolute;
+    left:50%;
+    top:50%;
+    border-radius:1px;
+    background:#ffffff;
+}
+
+.proxy-ca-float-toggle:before{
+    width:12px;
+    height:2px;
+    margin-left:-6px;
+    margin-top:-1px;
+}
+
+.proxy-ca-float-toggle:after{
+    width:2px;
+    height:12px;
+    margin-left:-1px;
+    margin-top:-6px;
+}
+
+.proxy-ca-float-toggle:hover{
+    background:#6f4faa;
+    box-shadow:0 2px 6px rgba(90,65,125,.24);
+}
+
+/* 見出しと中心を揃え、パネル右端にも入力欄と同じ余白を確保。 */
+.proxy-ca-float-toggle.proxy-ca-float-open{
+    top:11px;
+    left:335px;
+    right:auto;
+    width:24px;
+    height:24px;
+    border:1px solid #d7cae3;
+    border-radius:7px;
+    background:#f5f0fa;
+    box-shadow:none;
+}
+
+.proxy-ca-float-toggle.proxy-ca-float-open:before,
+.proxy-ca-float-toggle.proxy-ca-float-open:after{
+    background:#7656b5;
+    -ms-transform:rotate(45deg);
+    transform:rotate(45deg);
+}
+
+.proxy-ca-float-toggle.proxy-ca-float-open:hover{
+    background:#eae1f4;
+    border-color:#b99dca;
+    box-shadow:none;
+}
+
+/* バッジをbuttonの外へ置き、HTAのボタン内部で切れないようにする。 */
+.proxy-ca-count-badge{
+    display:none;
+    position:absolute;
+    z-index:1311;
+    top:116px;
+    right:-48px;
+    box-sizing:border-box;
+    width:20px;
+    height:20px;
+    padding:0;
+    border:2px solid #fffaff;
+    border-radius:50%;
+    background:#df4655;
+    color:#ffffff;
+    font-family:Arial,sans-serif;
+    font-size:11px;
+    font-weight:bold;
+    line-height:16px;
+    text-align:center;
+    pointer-events:none;
+}
+
+.proxy-ca-float-toggle.proxy-ca-has-extra + .proxy-ca-count-badge{
+    display:block;
+}
+
+.proxy-ca-float-toggle.proxy-ca-float-open + .proxy-ca-count-badge,
+.proxy-ca-float-toggle:disabled + .proxy-ca-count-badge{
+    display:none;
+}
+
+.proxy-ca-float-toggle:disabled{
+    border-color:#cfc5d4;
+    background:#cfc5d4;
+    box-shadow:none;
+    cursor:default;
+}
+
+.proxy-ca-float-toggle:disabled:before,
+.proxy-ca-float-toggle:disabled:after{
+    background:#f8f6f9;
+}
+
 .option-zone{
-    width:148px;
+    position:relative;
+    left:-8px;
+    width:140px;
     margin-left:0;
     margin-right:0;
 }
 
-/* 左側は CA名後から8px右へ寄せつつ、右端位置は維持。 */
+/* 追加ボタンの余白を含む左側876pxを確保し、右側を均等な3列にする。 */
 .detail-zone{
     float:right;
-    width:calc(100% - 856px);
+    width:calc(100% - 876px);
 }
 
 .detail-top,
@@ -983,7 +1125,7 @@ select:focus{
     width:100%;
 }
 
-/* 右側は190pxの3列・列間12px。送信ボタンとも右端・幅を揃える。 */
+/* 右側は均等な3列・列間12px。送信ボタンとも右端・幅を揃える。 */
 .detail-top .field{
     width:calc((100% - 24px) / 3);
 }
@@ -993,7 +1135,7 @@ select:focus{
 }
 
 .card-action-row{
-    left:884px; /* カード左余白28px + 左側856px */
+    left:904px; /* カード左余白28px + 左側876px */
     right:20px;
     width:auto;
     font-size:0; /* inline-block間の改行・空白による余白をなくす */
