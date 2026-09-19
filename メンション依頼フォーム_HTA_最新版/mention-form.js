@@ -2434,11 +2434,21 @@ function getCsvOptionValue(req){
 }
 
 function makeCsvLine(requestId,sentAt,baseName,requester,req){
+    // 書き込み用の値だけを左詰めにする。入力欄・reqの内容は変更しない。
+    var proxyNames=[],i,name;
+    for(i=1;i<=6;i++){
+        name=req["proxyCA"+i];
+        if(String(name==null ? "" : name).replace(/^\s+|\s+$/g,"")!==""){
+            proxyNames.push(name);
+        }
+    }
+    while(proxyNames.length<6){ proxyNames.push(""); }
+
     return csvJoin([
         sentAt,baseName,requester,String(req.requestNo),
         req.organization,req.caName,req.attendance,
-        req.proxyCA1,req.proxyCA2,req.proxyCA3,
-        req.proxyCA4,req.proxyCA5,req.proxyCA6,
+        proxyNames[0],proxyNames[1],proxyNames[2],
+        proxyNames[3],proxyNames[4],proxyNames[5],
         getCsvOptionValue(req),
         req.mailMemo,req.processedAt,req.dueDate,
         req.type,requestId
